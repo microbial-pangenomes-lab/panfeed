@@ -7,7 +7,7 @@ panfeed then prepares the data as input for pyseer, while keeping the positional
 
 # Documentation
 To start with panfeed, simply copy the two scripts (main.py and panfeed_modules.py) into the folder, containing the GFF files and the output files from panaroo. Then enter the command above (with your specific file names etc.).
-The output comes in the form of 3 CSV files (+one error_log file that keeps track of refound genes), which contain information on the k-mers from strains of interest, hashed patterns to patterns and k-mers to hashed patterns. All files are tab delimited CSV files.
+The output comes in the form of 3 CSV files (+one error_log file that keeps track of genes that were refound by panaroo), which contain information on the k-mers from strains of interest, hashed patterns to patterns and k-mers to hashed patterns. All files are tab delimited CSV files.
 
 	python main.py  --stroi_in		#May be a simple textfile that contains the strain names for the strains of interest. K-mer positions for these strains are being recorded.
                                                                   
