@@ -1,6 +1,6 @@
 # panfeed
 
-panfeed makes use of panaroos output files (gene_presence_absence.csv and gene_data.csv), which already cluster the genes of the input genomes into groups of close relatives.
+panfeed makes use of panaroo's output files (gene_presence_absence.csv and gene_data.csv), which already cluster the genes of the input genomes into groups of close relatives.
 panfeed then prepares the data as input for pyseer, while keeping the positional information for each k-mer that originates from a strain of interest (as specified by user), to facilitate the visualization and other downstream applications.
 
 	python main.py  --stroi_in stroi.txt --stroi_out k-mers_for_strains_of_interest.csv --kmer_length 31 --presence_absence gene_presence_absence.csv --gene_data "" --start_inter 0 --end_inter 0 --canon True --specfilt True
