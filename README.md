@@ -1,9 +1,10 @@
 # panfeed
 
-panfeed makes use of panaroo's output files (gene_presence_absence.csv and gene_data.csv), which already cluster the genes of the input genomes into groups of close relatives.
+panfeed makes use of panaroo's output file (gene_presence_absence.csv), which already clusters the genes of the input genomes into groups of close relatives.
 panfeed then prepares the data as input for pyseer, while keeping the positional information for each k-mer that originates from a strain of interest (as specified by user), to facilitate the visualization and other downstream applications.
 
 # Prerequisites:
+
 `pyfaidx` (0.6.3.1)
 
 `numpy` (1.20.3)
@@ -17,7 +18,9 @@ Installation:
 
 	python .\setup.py install
 
-Panfeed may then be called via the console, irrespective of the directory.
+Panfeed may then be called via the console, irrespective of the directory. e.g.:
+
+	panfeed -g ./gffdirectory/ --targets ./target.txt -o ./panfeedoutput -p gene_presence_absence.csv
 
 
 To use panfeed via the runner script, simply execute the script by typing:
@@ -29,9 +32,6 @@ To use panfeed via the runner script, simply execute the script by typing:
 
 
 # Documentation
-To start with panfeed, simply copy the two scripts (main.py and panfeed_modules.py) into the folder, containing the GFF files and the output files from panaroo. Then enter the command above (with your specific file names etc.).
-The output comes in the form of 3 TSV files, which contain information on the k-mers from strains of interest, hashed patterns to patterns and k-mers to hashed patterns.
-
 	-g --gff
 Directory which contains all the GFF files. They must also contain the genome sequence and should be named the same as the panaroo .csv-header
 
@@ -64,6 +64,8 @@ If this option is used, the verbosity of the printed information is increased.
 
 	--version
 Displays the current version of panfeed.
+
+The output of panfeed comes in the form of three TSV files that contain information on the position of logged k-mers (kmers.tsv), hashed patterns to patterns (hashes_to_patterns.tsv) and k-mers to hashed patterns (kmers_to_hashes.tsv). Additionally, panfeed will produce the .fasta and .fasta.fai (fasta index) files for the respective genomes/GFF files.
 
 # Citations
 `pyseer`: Lees, John A., Galardini, M., et al. pyseer: a comprehensive tool for microbial pangenome-wide association studies. Bioinformatics 34:4310–4312 (2018). doi:10.1093/bioinformatics/bty539.
