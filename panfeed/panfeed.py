@@ -1,4 +1,8 @@
-import os, sys
+#!/usr/bin/env python
+
+import os
+import sys
+import logging
 import pandas as pd
 from pyfaidx import Fasta, Faidx
 import numpy as np
@@ -8,91 +12,99 @@ import shutil
 from collections import namedtuple
 from io import StringIO
 
+logger = logging.getLogger('panfeed.panfeed')
 
-
-def what_are_my_inputfiles(): # adds all the GFF files in the directory to a list
+def what_are_my_inputfiles(gffdir): # adds all the GFF files in the directory to a list
     filelist = []
     
-    for file in os.listdir():
-        
+    for file in os.listdir(gffdir):
+        only_file = os.path.split(file)[-1]
         if file.endswith(".gff" or "gff"):
             
-            filelist.append(file.split(".")[0])
+            genome = only_file.split(".")[0]
+
+            logger.debug(f"Adding {genome} ({file})")
+
+            filelist.append(genome)
+        else:
+            logger.debug(f"Ignoring {file}")
             
-    if filelist == []:
+    if len(filelist) == 0:
         
-        sys.stderr.write("no GFF files found in working directory :(")
+        logger.error(f"No GFF files found in working directory ({gffdir})")
         
         sys.exit(1)
         
     return filelist
 
 
-def prep_data_n_fasta(filelist): # prepares the hybrid GFF files and creates fasta files
+def prep_data_n_fasta(filelist, gffdir, output): # prepares the hybrid GFF files and creates fasta files
     
     data = {}
     
     for genome in filelist:
     
-        txtfile = open(f"{genome}.fasta", "w")
+        logger.debug(f"Handling {genome}")
+
+        logger.debug(f"Creating fasta file for {genome}")
+        
+        txtfile = open(os.path.join(output, f"{genome}.fasta"), "w")
     
-        txtfile.write(open(f"{genome}.gff", "r").read().split("##FASTA")[1])
+        txtfile.write(open(os.path.join(gffdir, f"{genome}.gff"), "r").read().split("##FASTA")[1])
     
         txtfile.close()
     
-        sequences = create_faidx(f'{genome}.fasta')
+        logger.debug(f"Creating faidx file for {genome}")
+        
+        sequences = create_faidx(os.path.join(output, f'{genome}.fasta'))
     
-        features = parse_gff(f'{genome}.gff')
+        logger.debug(f"Parsing features for {genome}")
+        
+        features = parse_gff(os.path.join(gffdir, f'{genome}.gff'))
     
         data[genome] = (sequences, features)
     
     return data
 
-def set_input_output(stroi_in, stroi_out, presence_absence, gene_data):
+def set_input_output(stroi_in, presence_absence, output):
     # determines the names of the input, output files 
-    
-    if gene_data == "":
-        
-        pass
-    
-    else:
-        
-        gene_data = pd.read_csv(f"{gene_data}", sep=",")
-        # load the gene_data_table that is needed to locate the sequence of refound genes
- 
-    genepres = pd.read_csv(f"{presence_absence}", sep=",", index_col=0).drop(columns=['Non-unique Gene name', 'Annotation'])
+   
+    logger.debug(f"Loading pangenome file from panaroo ({presence_absence})")
+    genepres = pd.read_csv(presence_absence, sep=",", index_col=0).drop(columns=['Non-unique Gene name', 'Annotation'])
     # load the gene_presence_absence matrix which will be used to ascribe strain/genes to clusters
     
-    if stroi_in != "":
+    if stroi_in is not None:
+        logger.debug(f"Loading target strains ({stroi_in})")
         
         stroi = open(f"{stroi_in}", "r").read()
         
     else:
+        logger.warning(f"No target strains provided")
         
         stroi = ""
     
-    if os.path.exists("./output"):
-        
-        shutil.rmtree("./output")
-        
-        os.mkdir("./output")
-        
+    if os.path.exists(output):
+       
+        logger.error(f"Output directory {output} exists! Please "
+                      "remove it and restart")
+        sys.exit(1)
     else:
+        logger.debug(f"Creating output directory ({output})")
         
-        os.mkdir("./output")
+        os.mkdir(output)
     
-    error_log = open("./output/unfound_genes.out", "a")
-
-    kmer_stroi = open(f"./output/{stroi_out}", "a")
+    logger.debug(f"Creating output files within {output}")
+    
+    kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
     
     #creates the header for the strains of interest output file
     kmer_stroi.write("cluster\tstrain\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
     
-    hash_pat = open("./output/hashes_to_patterns.out", "a")
+    hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
 
-    kmer_hash = open("./output/kmers_to_hashes.out", "a")
+    kmer_hash = open(os.path.join(output, "kmers_to_hashes.tsv"), "w")
 
-    return stroi, error_log, kmer_stroi, hash_pat, kmer_hash, gene_data, genepres
+    return stroi, kmer_stroi, hash_pat, kmer_hash, genepres
 
 
 # a tuple with attribute names
@@ -114,7 +126,6 @@ Sequence = namedtuple("Sequence", [])
 def create_faidx(file_name, uppercase=True):
     
     faidx = Fasta(file_name,
-                  
                   sequence_always_upper=uppercase)
     
     return faidx
@@ -190,17 +201,17 @@ def parse_gff(file_name, feature_types=None):
                 # not distinguishing between exceptions
                 # not great behaviour
                 
-                sys.stderr.write(f'{e}, skipping line "{line.rstrip()}"\n')
+                logger.warning(f'{e}, skipping line "{line.rstrip()}" from {file_name}')
                 
                 continue
     
     return features
 
-def iter_gene_clusters(panaroo, genome_data, error_log, up, down, canon, patfilt):
+def iter_gene_clusters(panaroo, genome_data, up, down, patfilt):
     
-    errormem = StringIO()
     # go through each gene cluster
     for idx, row in panaroo.iterrows():
+        logger.debug(f"Extracting sequences from {idx}")
         # output dict
         # key: strain
         # value: list of faidx sequence objects
@@ -247,7 +258,7 @@ def iter_gene_clusters(panaroo, genome_data, error_log, up, down, canon, patfilt
                     
                 except KeyError:
                     # e.g. refound genes are not in the GFF
-                    errormem.write(f'Could not find gene {gene}\n')
+                    logger.warning(f"Could not find gene {gene} from {idx}")
                     
                     continue
                 # access its gene sequence
@@ -275,7 +286,6 @@ def iter_gene_clusters(panaroo, genome_data, error_log, up, down, canon, patfilt
             
         yield gene_sequences, idx, clusterpresab
 
-    error_log.write(errormem.getvalue())
 
 def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon):
 #iterates through genes present in the cluster
@@ -283,6 +293,7 @@ def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon):
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
 
     for cluster, idx, clusterpresab in cluster_gen:
+        logger.debug(f"Extracting k-mers from {idx}")
 
         memchunk = StringIO()
         
@@ -535,5 +546,5 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt):
         kmer_hash.write(memchunkkmer_hash.getvalue())
 
 
-
-
+if __name__ == "__main__":
+    pass
