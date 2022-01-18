@@ -95,14 +95,14 @@ def set_input_output(stroi_in, presence_absence, output):
     
     logger.debug(f"Creating output files within {output}")
     
-    kmer_stroi = open(os.path.join(output, "kmers.txt"), "w")
+    kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
     
     #creates the header for the strains of interest output file
     kmer_stroi.write("cluster\tstrain\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
     
-    hash_pat = open(os.path.join(output, "hashes_to_patterns.out"), "w")
+    hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
 
-    kmer_hash = open(os.path.join(output, "kmers_to_hashes.out"), "w")
+    kmer_hash = open(os.path.join(output, "kmers_to_hashes.tsv"), "w")
 
     return stroi, kmer_stroi, hash_pat, kmer_hash, genepres
 
