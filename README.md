@@ -1,38 +1,71 @@
 # panfeed
 
-panfeed makes use of panaroo's output files (gene_presence_absence.csv and gene_data.csv), which already cluster the genes of the input genomes into groups of close relatives.
+panfeed makes use of panaroo's output file (gene_presence_absence.csv), which already clusters the genes of the input genomes into groups of close relatives.
 panfeed then prepares the data as input for pyseer, while keeping the positional information for each k-mer that originates from a strain of interest (as specified by user), to facilitate the visualization and other downstream applications.
 
-	python main.py  --stroi_in stroi.txt --stroi_out k-mers_for_strains_of_interest.csv --kmer_length 31 --presence_absence gene_presence_absence.csv --gene_data "" --start_inter 0 --end_inter 0 --canon True --specfilt True
-
-# Documentation
-To start with panfeed, simply copy the two scripts (main.py and panfeed_modules.py) into the folder, containing the GFF files and the output files from panaroo. Then enter the command above (with your specific file names etc.).
-The output comes in the form of 3 CSV files (+one error_log file that keeps track of genes that were refound by panaroo), which contain information on the k-mers from strains of interest, hashed patterns to patterns and k-mers to hashed patterns. All files are tab delimited CSV files.
-
-	python main.py  --stroi_in		#May be a simple textfile that contains the strain names for the strains of interest. K-mer positions for these strains are being recorded.
-                                                                  
-                	--stroi_out		#File name for the outputfile, which contains the logged k-mer positions. 
-                
-                	--kmer_length		#K-mer length that should be used by panfeed.
-                
-                	--presence_absence	#The presence_absence_gene_matrix as output by panaroo. Contains the cluster information for the different strains.
-                                                                  
-                	--gene_data		#This matrix contains additional cluster information, such as the refound genes and their sequence (but not their positional information).
-                                                                  
-                	--start_inter		#Includes the specified amount of nucleotides upstream of all genes (to include the promotor region for instance).
-                
-                	--end_inter		#Includes the specified amount of nucleotides downstream of all genes.
-                
-                	--canon			#Makes panfeed only consider canonical k-mers (lexicographically).
-                
-                	--specfilt		#Filters out k-mers with patterns that correspond to the original pattern of the entire cluster. If this pattern is significant for a certain trait, it is likely due to the presence or absence of the entire gene.
-
 # Prerequisites:
+
 `pyfaidx` (0.6.3.1)
 
 `numpy` (1.20.3)
 
 `pandas` (1.3.2)
+
+# Getting started
+Download the zipped folder and unpack it in the desired directory. You can then either install panfeed or use the panfeed-runner.py script to run it.
+
+Installation:
+
+	python .\setup.py install
+
+Panfeed may then be called via the console, irrespective of the directory. e.g.:
+
+	panfeed -g ./gffdirectory/ --targets ./target.txt -o ./panfeedoutput -p gene_presence_absence.csv
+
+
+To use panfeed via the runner script, simply execute the script by typing:
+
+	python ./panfeed-runner.py
+	
+(the path is of course dependent on your current position)
+
+
+
+# Documentation
+	-g --gff
+Directory which contains all the GFF files. They must also contain the genome sequence and should be named the same as the panaroo .csv-header
+
+	--targets
+File indicating, for which samples the k-mer positions should be logged. a simple text file containing the sample names suffices.
+
+	-o --output
+Name of the output directory. If the directory already exists, an error will be raised.
+
+	-k --kmer-length
+Length of the k-mers. The default is 31 nt. 
+
+	-p --presence-absence
+Panaroo's gene_presence_absence.csv, which contains all the clustering information.
+
+	--upstream
+How many base pairs to include upstream of the actual gene sequence. (e.g. to include promoter regions)
+
+	--downstream
+How many base pairs to include downstream of the actual gene sequence. (e.g. to include promoter regions)
+
+	--non_canonical
+This option forces panfeed to also compute the non-canonical k-mers. By default, panfeed only considers the canonical (lexicographically smallest) k-mers.
+
+	--no-filter
+By default panfeed filters out all k-mers that have the same presence absence pattern as the gene cluster. This option may be activated to include these k-mers.
+
+	-v
+If this option is used, the verbosity of the printed information is increased.
+
+	--version
+Displays the current version of panfeed.
+
+The output of panfeed comes in the form of three TSV files that contain information on the position of logged k-mers (kmers.tsv), hashed patterns to patterns (hashes_to_patterns.tsv) and k-mers to hashed patterns (kmers_to_hashes.tsv). Additionally, panfeed will produce the .fasta and .fasta.fai (fasta index) files for the respective genomes/GFF files.
 
 # Citations
 `pyseer`: Lees, John A., Galardini, M., et al. pyseer: a comprehensive tool for microbial pangenome-wide association studies. Bioinformatics 34:4310–4312 (2018). doi:10.1093/bioinformatics/bty539.
