@@ -98,7 +98,7 @@ def set_input_output(stroi_in, presence_absence, output):
     kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
     
     #creates the header for the strains of interest output file
-    kmer_stroi.write("cluster\tstrain\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
+    kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
     
     hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
 
@@ -115,10 +115,13 @@ Feature = namedtuple('Feature', ['id',
                                  'strand'])
 
 Seqinfo = namedtuple("Seqinfo", ["sequence",
+                                 "compsequence",
+                                 "id",
                                  "chromosome",
                                  "start",
                                  "end",
-                                 "strand"])
+                                 "strand",
+                                 "offset"])
                      
 
 Sequence = namedtuple("Sequence", [])
@@ -207,7 +210,7 @@ def parse_gff(file_name, feature_types=None):
     
     return features
 
-def iter_gene_clusters(panaroo, genome_data, up, down, patfilt):
+def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt):
     
     # go through each gene cluster
     all_ogs = panaroo.shape[0]
@@ -262,23 +265,50 @@ def iter_gene_clusters(panaroo, genome_data, up, down, patfilt):
                     logger.warning(f"Could not find gene {gene} from {idx} in {strain}")
                     
                     continue
-                # access its gene sequence
-                seq = sequences[feat.chromosome][feat.start-1+up:feat.end+down]
-                # be aware of strand
-                revseq = -seq
                 
-                if feat.strand == -1:
-
-                    revstrand = 1
-                    
+                # corner case: upstream offset is over the contig's edge
+                # adjust if so and save the true offset
+                if feat.strand > 0 and feat.start-1-up < 0:
+                    offset = feat.start - 1
+                elif feat.strand < 0 and feat.end+up > len(sequences[feat.chromosome]):
+                    offset = len(sequences[feat.chromosome]) - feat.end
                 else:
+                    offset = up
+                
+                # access its gene sequence
+                if not down_start_codon:
+                    # down means relative to the gene's 3'
+                    if feat.strand > 0:
+                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.end+down]
+                        seq_start = feat.start - offset
+                        seq_end = feat.end + down
+                    else:
+                        seq = -sequences[feat.chromosome][feat.start-1-down:feat.end+offset]
+                        seq_start = feat.start - down
+                        seq_end = feat.end + offset
+                else:
+                    # down means relative to the gene's 5'
+                    if feat.strand > 0:
+                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.start+down]
+                        seq_start = feat.start - offset
+                        seq_end = feat.start + down
+                    else:
+                        seq = -sequences[feat.chromosome][feat.end-1-down:feat.end+offset]
+                        seq_start = feat.end - down
+                        seq_end = feat.end + offset
 
-                    revstrand = -1
-                
+                # reverse complement
+                revseq = -seq
+                # reverse it, easier to slice
+                # so effectively now it's just the complement
+                revseq = revseq[::-1]
+
                 # save it
-                gene_sequences[strain].append(Seqinfo(str(seq), feat.chromosome, feat.start, feat.end, feat.strand))
-                
-                gene_sequences[strain].append(Seqinfo(str(revseq), feat.chromosome, feat.start, feat.end, revstrand))
+                seq1 = Seqinfo(str(seq), str(revseq),
+                               feat.id, feat.chromosome,
+                               seq_start, seq_end,
+                               feat.strand, offset)
+                gene_sequences[strain].append(seq1)
         
         # provide an empty list if the strain does not have the gene
         for strain in absent:
@@ -305,179 +335,64 @@ def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon):
         n_strains = len(sortstrain)
 
         for strain in cluster.keys():
+            for seq in cluster[strain]:
+                gene_id = seq.id
+                offset = seq.offset
 
-            if canon == True:#block for canonical k-mers
+                num_kmer = len(seq.sequence) - klength + 1
+                seqlen = len(seq.sequence)
+
+                contig = seq.chromosome
+                strand = seq.strand
+                for pos in range(num_kmer):
+                    specseq = str(seq.sequence[pos:pos + klength])
+                    # get back to reverse complement
+                    revspecseq = str(seq.compsequence[pos:pos + klength])[::-1]
                 
-                if strain in stroi:#subblock for strains of interest
-                    
-                    for seq1, seq2 in zip(cluster[strain][::2], cluster[strain][1::2]):
-
-                        num_kmer = len(seq1.sequence) - klength + 1
-                        
-                        seqlen = len(seq1.sequence)
-                        
-                        for pos in range(num_kmer):
-                            
-                            if pos == 0:
-                            #prevents erroneous slicing of k-mers
-                                revspecseq = str(seq2.sequence[-pos - klength::])
-                            
-                            else:
-                                
-                                revspecseq = str(seq2.sequence[-pos - klength:-pos:])
-                            
-                            contigstart = seq1.start #starting position of the gene in relation to the contig
-                                
-                            truestart = contigstart + pos #starting postition of the k-mer in relation to the contig
-                                
-                            trueend = contigstart + pos + klength #ending postition of the k-mer in relation to the contig
-                            
-                            specseq = str(seq1.sequence[pos:pos + klength])
-
-                            if specseq < revspecseq: #selects the lexicographically smallest kmer
-                                
-                                if specseq not in cluster_dict:
-                                     
-                                    cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
-                                     
-                                cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-
-                                contig = seq1.chromosome
-
-                                strand = seq1.strand
-                                
-                                if strand < 0:
-                                    
-                                
-                                    memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{pos+klength}\t{pos}\t{strand}\t{specseq}\n")
-                                else:
-                                    
-                                    memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{pos}\t{pos+klength}\t{1}\t{specseq}\n")
-                                
-                            else:
-                                
-                                strand = seq2.strand
-
-                                contig = seq2.chromosome
-                                 
-                                if revspecseq not in cluster_dict:
-                                     
-                                    cluster_dict[f"{revspecseq}"] = np.zeros(n_strains).astype(int)
-                                     
-                                cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
-                                
-                                contigstart = int(seq2.start)    
-                                
-                                if strand < 0:
-                                                                    
-                                    memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{pos+klength}\t{pos}\t{strand}\t{revspecseq}\n")
-                                
-                                else:
-                                                                        
-                                    memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{pos}\t{pos+klength}\t{1}\t{revspecseq}\n")
-                                
-                else:#subblock for other strains##########################################
-                    
-                    for seq1, seq2 in zip(cluster[strain], cluster[strain][::2]):
-                        
-                        num_kmer = len(seq1.sequence) - klength + 1
-                        
-                        seqlen = len(seq1.sequence)
-                        
-                        for pos, posrevcomp in zip(range(num_kmer),range(num_kmer+1,0,-1)):
-                
-                            specseq = str(seq1.sequence[pos:pos + klength])
-                            
-                            revspecseq = str(seq2.sequence[posrevcomp - klength:posrevcomp])
-                            
-                            canonseq = min(specseq, revspecseq)
-                            
-                            if canonseq not in cluster_dict:
-                            
-                                cluster_dict[f"{canonseq}"] = np.zeros(n_strains).astype(int)
-                                     
-                            cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
-                
-            else:#block for non-canonical k-mers#############################################################
-                
-                for seq in cluster[strain]:
-    
-                    # determines the number of k-mers in the sequence
-                    num_kmer = len(seq.sequence) - klength + 1
-                    
-                    seqlen = len(seq.sequence)
-                    
-                    strand = seq.strand
-                    
-                    contig = seq.chromosome
-                    
-                    if strain in stroi:#subblock for strains of interest##########################################
-                        #if a gene belongs to a strain of interest the strain,contig,start,stop,strand,sequence
-                        #of its k-mers are being written to kmer_stroi
-                        if strand > 0:
-                        
-                            for pos in range(num_kmer):
-                            
-                                specseq = str(seq.sequence[pos:pos + klength])
-                        
-                                if specseq not in cluster_dict:
-                                    # init with an "empty" array
-                                    cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
-                            
-                                # flip the "0" to "1"
-                                cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-                                
-                                contigstart = int(seq.start)
-                                
-                                truestart = contigstart + pos + klength
-                                        
-                                trueend = contigstart + pos
-                        
-                                memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{pos}\t{pos+klength}\t{strand}\t{specseq}\n")
-    
+                    if canon == True:
+                        if specseq <= revspecseq:
+                            canonseq = specseq
+                            used_strand = strand
                         else:
-                            
-                            for pos in range(num_kmer):
-                            
-                                specseq = str(seq.sequence[pos:pos + klength])
-                                
-                                if specseq not in cluster_dict:
-                                    # init with an "empty" array
-                                    cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
-                            
-                                # flip the "0" to "1"
-                                cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-                                
-                                contigstart = int(seq.start)
-                                
-                                truestart = contigstart - pos
-                                        
-                                trueend = contigstart - pos - klength
+                            canonseq = revspecseq
+                            used_strand = - strand
+
+                        if canonseq not in cluster_dict:
+                            cluster_dict[f"{canonseq}"] = np.zeros(n_strains).astype(int)
+                        cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
+                    else:
+                        used_strand = strand
+                        if specseq not in cluster_dict:
+                            cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
+                        cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
                         
-                                memchunk.write(f"{idx}\t{strain}\t{contig}\t{truestart}\t{trueend}\t{seqlen - pos}\t{seqlen - pos- klength}\t{strand}\t{specseq}\n")
-                        
-                    else:#subblock for other strains##########################################
-                    #does the same as the if-statement block on the same indent,
-                    #without logging the k-mer infos, as the strain is not a strain of interest
-                        for pos in range(num_kmer):
-                        
-                            specseq = str(seq.sequence[pos:pos + klength])
-                    
-                            # specseqrev = str(seqrevcomp1[pos:pos + klength])
-            
-                            if specseq not in cluster_dict:
-                                # init with an "empty" array
-                                cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
-                        
-                            # flip the "0" to "1"
-                            cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-                        
-                        
+                        if revspecseq not in cluster_dict:
+                            cluster_dict[f"{revspecseq}"] = np.zeros(n_strains).astype(int)
+                        cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
+
+                    if strain in stroi:
+                        if strand > 0:
+                            contigstart = seq.start
+                            truestart = contigstart + pos
+                            trueend = contigstart + pos + klength
+
+                        else:
+                            contigstart = seq.end
+                            trueend = contigstart - pos
+                            truestart = contigstart - pos - klength
+
+                        genestart = pos - offset
+                        geneend = pos + klength - offset
+                        if canon == True:
+                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{canonseq}\n")
+                        else:
+                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
+                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
+
         kmer_stroi.write(memchunk.getvalue())
             
         yield cluster_dict, clusterpresab
-
-        
+ 
 
 def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt):
     #iterates through the cluster dictionary output by cluster_cutter()
