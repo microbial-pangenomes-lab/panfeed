@@ -65,15 +65,21 @@ def get_options():
                         default = 0,
                         help = "How many bases to include upstream of "
                                "the actual gene sequences "
-                               "(e.g. to include promoter region, "
+                               "(e.g. to include the 5' region, "
                                "default: %(default)d)")
     
     parser.add_argument("--downstream", type = int,
                         default = 0,
                         help = "How many bases to include downstream of "
                                "the actual gene sequences "
-                               "(e.g. to include promoter region, "
+                               "(e.g. to include the 3' region, "
                                "default: %(default)d)")
+
+    parser.add_argument("--downstream-start-codon",
+                        action = "store_true",
+                        default = False,
+                        help = "Center the --downstream argument "
+                               "at the start codon (default is stop codon)")
 
     parser.add_argument("--non-canonical",
                         action = "store_true",
@@ -126,8 +132,9 @@ def main():
                                                      data,
                                                      args.upstream,
                                                      args.downstream,
+                                                     args.downstream_start_codon,
                                                      not args.no_filter),
-                                  klength, 
+                                  klength,
                                   stroi, 
                                   kmer_stroi,
                                   not args.non_canonical),
