@@ -426,7 +426,8 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt):
                     pattern = cluster_dict[kmer].view(np.uint8)
                     hashed = hashlib.md5(pattern)     
                     khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-
+                    memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
+                    
                     if khash in patterns:
                         continue
                     patterns.add(khash)
@@ -437,7 +438,6 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt):
                     patterntup = "\t".join(map(str, cluster_dict[kmer]))
                                     
                     memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
-                    memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
                    
         else:
             for kmer in cluster_dict:
