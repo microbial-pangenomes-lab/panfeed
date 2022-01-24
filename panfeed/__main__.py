@@ -62,6 +62,14 @@ def get_options():
                         help = "Gene clusters presence absence table "
                                "as output by panaroo")
 
+    parser.add_argument("--maf", type = float,
+                        default = 0.01,
+                        help = "Minor allele frequency threshold; "
+                               "patterns whose frequency is below "
+                               "this value or above 1-MAF are excluded "
+                               "(default: %(default).2f, does not apply "
+                               "to the kmers.tsv file)")
+    
     parser.add_argument("--upstream", type = int,
                         default = 0,
                         help = "How many bases to include upstream of "
@@ -117,6 +125,10 @@ def main():
 
     klength = args.kmer_length
 
+    if args.maf > 0.5:
+        logger.warning("--maf should be below 0.5")
+        sys.exit(1)
+
     logger.info("Looking at input GFF files")
     filelist = what_are_my_inputfiles(args.gff)
     logger.info(f"Found {len(filelist)} input genomes")
@@ -151,6 +163,7 @@ def main():
                    kmer_hash,
                    genepres,
                    not args.no_filter,
+                   args.maf,
                    args.output)
 
     # nd = time()

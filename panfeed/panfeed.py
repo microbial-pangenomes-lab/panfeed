@@ -442,7 +442,7 @@ def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon, output):
         yield idx, cluster_dict, clusterpresab
  
 
-def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, output):
+def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, maf, output):
     #iterates through the cluster dictionary output by cluster_cutter()
     #outputs the hashed patterns, patterns and k-mers to the output files
     #two files are created: hashed k-mer patterns to presence/absence patterns
@@ -453,6 +453,19 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, ou
     if hash_pat is None or kmer_hash is None:
         multiple_files = True
 
+    if not multiple_files:
+        memchonkheader1 = StringIO()
+        memchonkheader2 = StringIO()
+        
+        memchonkheader1.write("hashed_pattern")
+        for strain in sorted(genepres.columns):
+            memchonkheader1.write(f"\t{strain}")
+        memchonkheader1.write("\n")
+        hash_pat.write(memchonkheader1.getvalue())
+
+        memchonkheader2.write("k-mer\thashed_pattern\n")
+        kmer_hash.write(memchonkheader2.getvalue())
+    
     # keep track of already observed patterns
     # might have a big memory footprint
     # TODO: check for memory footprint
@@ -473,58 +486,48 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, ou
             # must "flush" the already observed patterns file
             patterns = set()
 
-        memchonkheader1 = StringIO()
-        memchonkheader2 = StringIO()
-        
-        memchonkheader1.write("hashed_pattern")
-        for strain in sorted(genepres.columns):
-            memchonkheader1.write(f"\t{strain}")
-        memchonkheader1.write("\n")
-        hash_pat.write(memchonkheader1.getvalue())
+            memchonkheader1 = StringIO()
+            memchonkheader2 = StringIO()
+            
+            memchonkheader1.write("hashed_pattern")
+            for strain in sorted(genepres.columns):
+                memchonkheader1.write(f"\t{strain}")
+            memchonkheader1.write("\n")
+            hash_pat.write(memchonkheader1.getvalue())
 
-        memchonkheader2.write("k-mer\thashed_pattern\n")
-        kmer_hash.write(memchonkheader2.getvalue())
+            memchonkheader2.write("k-mer\thashed_pattern\n")
+            kmer_hash.write(memchonkheader2.getvalue())
 
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
         
-        if patfilt == True:
-            for kmer in cluster_dict:
-                if tuple(cluster_dict[kmer]) != tuple(clusterpresab):
-                    pattern = cluster_dict[kmer].view(np.uint8)
-                    hashed = hashlib.md5(pattern)     
-                    khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-                    memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
-                    
-                    if khash in patterns:
-                        continue
-                    patterns.add(khash)
-
-                    if not multiple_files and not len(patterns) % 1000:
-                        logger.debug(f"Observed patterns so far: {len(patterns)}")
-
-                    patterntup = "\t".join(map(str, cluster_dict[kmer]))
-                                    
-                    memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
-                   
-        else:
-            for kmer in cluster_dict:
-                pattern = cluster_dict[kmer].view(np.uint8)
-                hashed = hashlib.md5(pattern)
-                khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-                memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
-                
-                
-                if khash in patterns:
+        for kmer in cluster_dict:
+            af = cluster_dict[kmer].sum() / cluster_dict[kmer].shape[0]
+            if af >= 0.5:
+                af = 1-af
+            if af < maf:
+                continue
+            
+            if patfilt == True:
+                if tuple(cluster_dict[kmer]) == tuple(clusterpresab):
                     continue
-                patterns.add(khash)
 
-                if not multiple_files and not len(patterns) % 1000:
-                    logger.debug(f"Observed patterns so far: {len(patterns)}")
+            pattern = cluster_dict[kmer].view(np.uint8)
+            hashed = hashlib.md5(pattern)
+            khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
+            memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
+            
+            
+            if khash in patterns:
+                continue
+            patterns.add(khash)
 
-                patterntup = "\t".join(map(str, cluster_dict[kmer]))
-                            
-                memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
+            if not multiple_files and not len(patterns) % 1000:
+                logger.debug(f"Observed patterns so far: {len(patterns)}")
+
+            patterntup = "\t".join(map(str, cluster_dict[kmer]))
+                        
+            memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
 
         hash_pat.write(memchunkhash_pat.getvalue())
         kmer_hash.write(memchunkkmer_hash.getvalue())
