@@ -70,14 +70,14 @@ def prep_data_n_fasta(filelist, gffdir, output): # prepares the hybrid GFF files
 def clean_up_fasta(filelist, output):
     for genome in filelist:
         fasta_file = os.path.join(output, f"{genome}.fasta")
-        logger.debug(f"Removing fasta file for {genome} (fasta_file)")
+        logger.debug(f"Removing fasta file for {genome} ({fasta_file})")
         if os.path.isfile(fasta_file):
             os.remove(fasta_file)
         else:
             logger.warning(f"Could not delete {fasta_file}")
         
         faidx_file = os.path.join(output, f"{genome}.fasta.fai")
-        logger.debug(f"Removing faidx file for {genome} (faidx_file)")
+        logger.debug(f"Removing faidx file for {genome} ({faidx_file})")
         if os.path.isfile(faidx_file):
             os.remove(faidx_file)
         else:
