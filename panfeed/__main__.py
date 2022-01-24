@@ -10,6 +10,7 @@ from .__init__ import __version__
 from .colorlog import ColorFormatter
 
 from .panfeed import prep_data_n_fasta, what_are_my_inputfiles, set_input_output
+from .panfeed import clean_up_fasta, what_are_my_inputfiles, set_input_output
 from .panfeed import cluster_cutter, pattern_hasher, create_faidx, parse_gff
 from .panfeed import iter_gene_clusters, Feature
 
@@ -94,6 +95,12 @@ def get_options():
                                "presence absence pattern as the gene "
                                "cluster itself")
 
+    parser.add_argument("--multiple-files",
+                        action = "store_true",
+                        default = False,
+                        help = "Generate one set of outputs for each "
+                               "gene cluster (default: one set of outputs)")
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -120,7 +127,8 @@ def main():
     (stroi, kmer_stroi, hash_pat,
      kmer_hash, genepres) = set_input_output(args.targets,
                                              args.presence_absence,
-                                             args.output)
+                                             args.output,
+                                             not args.multiple_files)
 
     logger.info("Preparing inputs")
     data = prep_data_n_fasta(filelist, args.gff, args.output)
@@ -137,21 +145,29 @@ def main():
                                   klength,
                                   stroi, 
                                   kmer_stroi,
-                                  not args.non_canonical),
+                                  not args.non_canonical,
+                                  args.output),
                    hash_pat, 
                    kmer_hash,
                    genepres,
-                   not args.no_filter)
+                   not args.no_filter,
+                   args.output)
 
     # nd = time()
 
     # print(nd - strt)
 
-    kmer_stroi.close()
+    if kmer_stroi is not None:
+        kmer_stroi.close()
 
-    hash_pat.close()
+    if hash_pat is not None:
+        hash_pat.close()
 
-    kmer_hash.close()
+    if kmer_hash is not None:
+        kmer_hash.close()
+    
+    logger.info("Removing temporary fasta files and faidx indices")
+    clean_up_fasta(filelist, args.output)
 
 
 if __name__ == "__main__":
