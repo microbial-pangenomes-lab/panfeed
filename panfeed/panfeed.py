@@ -66,11 +66,31 @@ def prep_data_n_fasta(filelist, gffdir, output): # prepares the hybrid GFF files
     
     return data
 
-def set_input_output(stroi_in, presence_absence, output):
+
+def clean_up_fasta(filelist, output):
+    for genome in filelist:
+        fasta_file = os.path.join(output, f"{genome}.fasta")
+        logger.debug(f"Removing fasta file for {genome} ({fasta_file})")
+        if os.path.isfile(fasta_file):
+            os.remove(fasta_file)
+        else:
+            logger.warning(f"Could not delete {fasta_file}")
+        
+        faidx_file = os.path.join(output, f"{genome}.fasta.fai")
+        logger.debug(f"Removing faidx file for {genome} ({faidx_file})")
+        if os.path.isfile(faidx_file):
+            os.remove(faidx_file)
+        else:
+            logger.warning(f"Could not delete {faidx_file}")
+
+def set_input_output(stroi_in, presence_absence, output, single_file=True):
     # determines the names of the input, output files 
    
     logger.debug(f"Loading pangenome file from panaroo ({presence_absence})")
-    genepres = pd.read_csv(presence_absence, sep=",", index_col=0).drop(columns=['Non-unique Gene name', 'Annotation'])
+    genepres = pd.read_csv(presence_absence,
+                           sep=",", index_col=0,
+                           low_memory=False).drop(
+                                   columns=['Non-unique Gene name', 'Annotation'])
     # load the gene_presence_absence matrix which will be used to ascribe strain/genes to clusters
     
     if stroi_in is not None:
@@ -95,16 +115,30 @@ def set_input_output(stroi_in, presence_absence, output):
     
     logger.debug(f"Creating output files within {output}")
     
+    if single_file:
+        kmer_stroi = create_kmer_stroi(output)
+        hash_pat, kmer_hash = create_hash_files(output) 
+    else:
+        # delayied opening of the files
+        kmer_stroi = None
+        hash_pat = None
+        kmer_hash = None
+
+    return stroi, kmer_stroi, hash_pat, kmer_hash, genepres
+
+def create_kmer_stroi(output):
     kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
     
     #creates the header for the strains of interest output file
     kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
-    
-    hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
 
+    return kmer_stroi
+
+def create_hash_files(output):
+    hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
     kmer_hash = open(os.path.join(output, "kmers_to_hashes.tsv"), "w")
 
-    return stroi, kmer_stroi, hash_pat, kmer_hash, genepres
+    return hash_pat, kmer_hash
 
 
 # a tuple with attribute names
@@ -215,7 +249,7 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
     # go through each gene cluster
     all_ogs = panaroo.shape[0]
     for i, (idx, row) in enumerate(panaroo.iterrows()):
-        logger.debug(f"Extracting sequences from {idx} ({i}/{all_ogs})")
+        logger.debug(f"Extracting sequences from {idx} ({i+1}/{all_ogs})")
         # output dict
         # key: strain
         # value: list of faidx sequence objects
@@ -318,15 +352,29 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
         yield gene_sequences, idx, clusterpresab
 
 
-def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon):
+def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon, output):
 #iterates through genes present in the cluster
 #shreds gene sequence into k-mers and adds them to the cluster dictionary
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
+
+    # set flag for multiple files
+    multiple_files = False
+    if kmer_stroi is None:
+        multiple_files = True
 
     for cluster, idx, clusterpresab in cluster_gen:
         logger.debug(f"Extracting k-mers from {idx}")
 
         memchunk = StringIO()
+        if multiple_files:
+            # close existing file?
+            if kmer_stroi is not None:
+                kmer_stroi.close()
+            # we need to create the file
+            path = os.path.join(output, idx)
+            if not os.path.exists(path):
+                os.mkdir(path)
+            kmer_stroi = create_kmer_stroi(path)
         
         cluster_dict = {}
     
@@ -390,73 +438,96 @@ def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon):
                             memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
 
         kmer_stroi.write(memchunk.getvalue())
-            
-        yield cluster_dict, clusterpresab
+         
+        yield idx, cluster_dict, clusterpresab
  
 
-def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt):
+def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, maf, output):
     #iterates through the cluster dictionary output by cluster_cutter()
     #outputs the hashed patterns, patterns and k-mers to the output files
     #two files are created: hashed k-mer patterns to presence/absence patterns
     #                       k-mer sequences to hashed k-mer patterns
-    memchonkheader1 = StringIO()
-    memchonkheader2 = StringIO()
     
-    memchonkheader1.write("hashed_pattern")
-    for strain in sorted(genepres.columns):
-        memchonkheader1.write(f"\t{strain}")
-    memchonkheader1.write("\n")
-    hash_pat.write(memchonkheader1.getvalue())
+    # set flag for multiple files
+    multiple_files = False
+    if hash_pat is None or kmer_hash is None:
+        multiple_files = True
 
-    memchonkheader2.write("k-mer\thashed_pattern\n")
-    kmer_hash.write(memchonkheader2.getvalue())
+    if not multiple_files:
+        memchonkheader1 = StringIO()
+        memchonkheader2 = StringIO()
+        
+        memchonkheader1.write("hashed_pattern")
+        for strain in sorted(genepres.columns):
+            memchonkheader1.write(f"\t{strain}")
+        memchonkheader1.write("\n")
+        hash_pat.write(memchonkheader1.getvalue())
 
+        memchonkheader2.write("k-mer\thashed_pattern\n")
+        kmer_hash.write(memchonkheader2.getvalue())
+    
     # keep track of already observed patterns
     # might have a big memory footprint
     # TODO: check for memory footprint
     patterns = set()
 
-    for cluster_dict, clusterpresab in cluster_dict_iter:
+    for idx, cluster_dict, clusterpresab in cluster_dict_iter:
+        if multiple_files:
+            # close existing file?
+            if hash_pat is not None:
+                hash_pat.close()
+            if kmer_hash is not None:
+                kmer_hash.close()
+            # we need to create the file
+            path = os.path.join(output, idx)
+            if not os.path.exists(path):
+                os.mkdir(path)
+            hash_pat, kmer_hash = create_hash_files(path)
+            # must "flush" the already observed patterns file
+            patterns = set()
+
+            memchonkheader1 = StringIO()
+            memchonkheader2 = StringIO()
+            
+            memchonkheader1.write("hashed_pattern")
+            for strain in sorted(genepres.columns):
+                memchonkheader1.write(f"\t{strain}")
+            memchonkheader1.write("\n")
+            hash_pat.write(memchonkheader1.getvalue())
+
+            memchonkheader2.write("k-mer\thashed_pattern\n")
+            kmer_hash.write(memchonkheader2.getvalue())
+
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
         
-        if patfilt == True:
-            for kmer in cluster_dict:
-                if tuple(cluster_dict[kmer]) != tuple(clusterpresab):
-                    pattern = cluster_dict[kmer].view(np.uint8)
-                    hashed = hashlib.md5(pattern)     
-                    khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-                    memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
-                    
-                    if khash in patterns:
-                        continue
-                    patterns.add(khash)
-
-                    if not len(patterns) % 1000:
-                        logger.debug(f"Observed patterns so far: {len(patterns)}")
-
-                    patterntup = "\t".join(map(str, cluster_dict[kmer]))
-                                    
-                    memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
-                   
-        else:
-            for kmer in cluster_dict:
-                pattern = cluster_dict[kmer].view(np.uint8)
-                hashed = hashlib.md5(pattern)
-                khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-                memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
-                
-                
-                if khash in patterns:
+        for kmer in cluster_dict:
+            af = cluster_dict[kmer].sum() / cluster_dict[kmer].shape[0]
+            if af >= 0.5:
+                af = 1-af
+            if af < maf:
+                continue
+            
+            if patfilt == True:
+                if tuple(cluster_dict[kmer]) == tuple(clusterpresab):
                     continue
-                patterns.add(khash)
 
-                if not len(patterns) % 1000:
-                    logger.debug(f"Observed patterns so far: {len(patterns)}")
+            pattern = cluster_dict[kmer].view(np.uint8)
+            hashed = hashlib.md5(pattern)
+            khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
+            memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
+            
+            
+            if khash in patterns:
+                continue
+            patterns.add(khash)
 
-                patterntup = "\t".join(map(str, cluster_dict[kmer]))
-                            
-                memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
+            if not multiple_files and not len(patterns) % 1000:
+                logger.debug(f"Observed patterns so far: {len(patterns)}")
+
+            patterntup = "\t".join(map(str, cluster_dict[kmer]))
+                        
+            memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
 
         hash_pat.write(memchunkhash_pat.getvalue())
         kmer_hash.write(memchunkkmer_hash.getvalue())
