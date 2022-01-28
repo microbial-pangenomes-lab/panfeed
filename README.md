@@ -79,6 +79,11 @@ Displays the current version of panfeed.
 
 The output of panfeed comes in the form of three TSV files that contain information on the position of logged k-mers (kmers.tsv), hashed patterns to patterns (hashes_to_patterns.tsv) and k-mers to hashed patterns (kmers_to_hashes.tsv). Additionally, panfeed will produce the .fasta and .fasta.fai (fasta index) files for the respective genomes/GFF files.
 
+# Uninstall panfeed
+To uninstall panfeed, pip can be used with:
+	
+	pip uninstall panfeed
+
 # Citations
 `pyseer`: Lees, John A., Galardini, M., et al. pyseer: a comprehensive tool for microbial pangenome-wide association studies. Bioinformatics 34:4310–4312 (2018). doi:10.1093/bioinformatics/bty539.
 
