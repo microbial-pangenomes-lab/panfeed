@@ -32,6 +32,9 @@ To use panfeed via the runner script, simply execute the script by typing:
 
 
 # Documentation
+	-h
+Displays the following commands and their description.
+
 	-g --gff
 Directory which contains all the GFF files. They must also contain the genome sequence and should be named the same as the panaroo .csv-header
 
@@ -47,11 +50,17 @@ Length of the k-mers. The default is 31 nt.
 	-p --presence-absence
 Panaroo's gene_presence_absence.csv, which contains all the clustering information.
 
+	--maf
+Set the minor allele frequency threshold. K-mers that are represented in a percentage of genomes below this threshold are excluded. --maf must be below 0.5 (default = 0.1).
+
 	--upstream
 How many base pairs to include upstream of the actual gene sequence. (e.g. to include promoter regions)
 
 	--downstream
 How many base pairs to include downstream of the actual gene sequence. (e.g. to include promoter regions)
+
+	--downstream-start-codon
+If active, the --downstream parameter will be based on the start codon coordinates of the gene.
 
 	--non_canonical
 This option forces panfeed to also compute the non-canonical k-mers. By default, panfeed only considers the canonical (lexicographically smallest) k-mers.
@@ -59,8 +68,11 @@ This option forces panfeed to also compute the non-canonical k-mers. By default,
 	--no-filter
 By default panfeed filters out all k-mers that have the same presence absence pattern as the gene cluster. This option may be activated to include these k-mers.
 
+	--multiple-files
+Activating this option will generate one set of output files for each gene cluster.
+
 	-v
-If this option is used, the verbosity of the printed information is increased.
+If this option is used, the verbosity of the displayed information is increased.
 
 	--version
 Displays the current version of panfeed.
