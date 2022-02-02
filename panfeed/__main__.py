@@ -124,7 +124,12 @@ def main():
     set_logging(args.v)    
 
     klength = args.kmer_length
-
+    
+    if args.downstream_start_codon == True and args.upstream + args.downstream < klength:
+        logger.warning("Query sequence is shorter than k-mer length"
+                       "Decrease k-mer size or increase query sequence length")
+        sys.exit(1)
+    
     if args.maf > 0.5:
         logger.warning("--maf should be below 0.5")
         sys.exit(1)
