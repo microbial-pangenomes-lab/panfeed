@@ -269,7 +269,7 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
         
         if patfilt == True:
             
-            clusterpresab = np.zeros(len(strains)).astype(int)
+            clusterpresab = np.zeros(len(strains),dtype = int)
             
             for strain in present:
                 
@@ -406,16 +406,16 @@ def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon, output):
                             used_strand = - strand
 
                         if canonseq not in cluster_dict:
-                            cluster_dict[f"{canonseq}"] = np.zeros(n_strains).astype(int)
+                            cluster_dict[f"{canonseq}"] = np.zeros(n_strains, dtype = int)
                         cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
                     else:
                         used_strand = strand
                         if specseq not in cluster_dict:
-                            cluster_dict[f"{specseq}"] = np.zeros(n_strains).astype(int)
+                            cluster_dict[f"{specseq}"] = np.zeros(n_strains, dtype = int)
                         cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
                         
                         if revspecseq not in cluster_dict:
-                            cluster_dict[f"{revspecseq}"] = np.zeros(n_strains).astype(int)
+                            cluster_dict[f"{revspecseq}"] = np.zeros(n_strains, dtype = int)
                         cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
 
                     if strain in stroi:
@@ -500,6 +500,16 @@ def pattern_hasher(cluster_dict_iter, hash_pat, kmer_hash, genepres, patfilt, ma
 
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
+        
+        pattern = clusterpresab.view(np.uint8)
+        hashed = hashlib.md5(pattern)
+        khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
+        memchunkkmer_hash.write(f"{idx}\t{khash}\n")
+        
+        if khash not in patterns:
+            patterns.add(khash)
+            patterntup = "\t".join(map(str, clusterpresab))
+            memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
         
         for kmer in cluster_dict:
             af = cluster_dict[kmer].sum() / cluster_dict[kmer].shape[0]
