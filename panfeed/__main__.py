@@ -47,7 +47,7 @@ def get_options():
                         help = "File indicating for which samples "
                                "k-mer positions should be logged "
                                "(one sample name per line, "
-                               "default: all samples)")
+                               "default: no samples)")
 
     parser.add_argument("-o", "--output",
                         default = "panfeed",
