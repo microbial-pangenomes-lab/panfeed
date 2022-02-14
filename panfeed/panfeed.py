@@ -98,7 +98,7 @@ def set_input_output(stroi_in, presence_absence, output, single_file=True):
         stroi = set()
         strainfile = open(f"{stroi_in}", "r")
         for line in strainfile:
-            stroi.add(line.rstrip("\n")
+            stroi.add(line.rstrip("\n"))
     else:
         logger.warning(f"No target strains provided")
         
