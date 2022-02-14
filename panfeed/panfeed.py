@@ -95,9 +95,10 @@ def set_input_output(stroi_in, presence_absence, output, single_file=True):
     
     if stroi_in is not None:
         logger.debug(f"Loading target strains ({stroi_in})")
-        
-        stroi = open(f"{stroi_in}", "r").read()
-        
+        stroi = set()
+        strainfile = open(f"{stroi_in}", "r")
+        for line in strainfile:
+            stroi.add(line.rstrip("\n")
     else:
         logger.warning(f"No target strains provided")
         
@@ -269,7 +270,7 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
         
         if patfilt == True:
             
-            clusterpresab = np.zeros(len(strains),dtype = int)
+            clusterpresab = np.zeros(len(strains), dtype = int)
             
             for strain in present:
                 
