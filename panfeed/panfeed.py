@@ -268,16 +268,13 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
         
         absent = strains.difference(present)
         
-        if patfilt == True:
+
             
-            clusterpresab = np.zeros(len(strains), dtype = int)
+        clusterpresab = np.zeros(len(strains), dtype = int)
             
-            for strain in present:
+        for strain in present:
                 
-                clusterpresab[sortstrain[strain]] = 1 
-        else:
-            
-            clusterpresab = 0
+            clusterpresab[sortstrain[strain]] = 1 
 
         # print(clusterpresab)
         # cycle through all the strains that have the gene
