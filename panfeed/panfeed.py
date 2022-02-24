@@ -113,7 +113,8 @@ def write_headers(hash_pat, kmer_hash, genepres):
     kmer_hash.write(memchonkheader2.getvalue())
 
 
-def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash, genepres, patfilt, maf, output):
+def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
+                   genepres, patfilt, maf, output, patterns=None):
     #iterates through the cluster dictionary output by cluster_cutter()
     #outputs the hashed patterns, patterns and k-mers to the output files
     #two files are created: hashed k-mer patterns to presence/absence patterns
@@ -127,7 +128,8 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash, genepres,
     # keep track of already observed patterns
     # might have a big memory footprint
     # TODO: check for memory footprint
-    patterns = set()
+    if patterns is None:
+        patterns = set()
 
     for idx, cluster_dict, clusterpresab, memchunk in cluster_dict_iter:
         if multiple_files:
@@ -196,6 +198,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash, genepres,
             memchunkhash_pat = None
             memchunkkmer_hash = None
 
+    return patterns
 
 if __name__ == "__main__":
     pass

@@ -181,19 +181,22 @@ def main():
                      canon=not args.non_canonical,
                      output=args.output)
  
+    patterns = set()
+
     pool = Pool(args.cores)
     while True:
         slice = itertools.islice(iter_i, args.cores * args.chunk)
         ret = pool.map(iter_o, slice)
         if len(ret) == 0:
             break
-        pattern_hasher(ret, kmer_stroi,
-                            hash_pat, 
-                            kmer_hash,
-                            genepres,
-                            not args.no_filter,
-                            args.maf,
-                            args.output)
+        patterns = pattern_hasher(ret, kmer_stroi,
+                                  hash_pat, 
+                                  kmer_hash,
+                                  genepres,
+                                  not args.no_filter,
+                                  args.maf,
+                                  args.output,
+                                  patterns)
 
     if kmer_stroi is not None:
         kmer_stroi.close()
