@@ -189,9 +189,10 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash, genepres,
                         
             memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
 
+        hash_pat.write(memchunkhash_pat.getvalue())
+        kmer_hash.write(memchunkkmer_hash.getvalue())
+
         if multiple_files:
-            hash_pat.write(memchunkhash_pat.getvalue())
-            kmer_hash.write(memchunkkmer_hash.getvalue())
             memchunkhash_pat = None
             memchunkkmer_hash = None
 
