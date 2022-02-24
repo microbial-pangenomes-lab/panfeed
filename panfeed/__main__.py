@@ -5,6 +5,9 @@ import sys
 import logging
 import argparse
 import logging.handlers
+from functools import partial
+import itertools
+from multiprocessing import Pool
 
 from .__init__ import __version__
 from .colorlog import ColorFormatter
@@ -109,6 +112,17 @@ def get_options():
                         help = "Generate one set of outputs for each "
                                "gene cluster (default: one set of outputs)")
 
+    parser.add_argument("--cores",
+                        type = int,
+                        default = 1,
+                        help = "Threads (default: %(default)d)")
+
+    parser.add_argument("--chunk",
+                        type = int,
+                        default = 100,
+                        help = "How many clusters to assign to each thread "
+                               "(default: %(default)d)")
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -154,24 +168,32 @@ def main():
         write_headers(hash_pat, kmer_hash, genepres)
 
     logger.info("Extracting k-mers")
-    pattern_hasher(cluster_cutter(iter_gene_clusters(genepres, 
-                                                     data,
-                                                     args.upstream,
-                                                     args.downstream,
-                                                     args.downstream_start_codon,
-                                                     not args.no_filter),
-                                  klength,
-                                  stroi, 
-                                  kmer_stroi,
-                                  not args.non_canonical,
-                                  args.output),
-                   kmer_stroi,
-                   hash_pat, 
-                   kmer_hash,
-                   genepres,
-                   not args.no_filter,
-                   args.maf,
-                   args.output)
+    iter_i = iter_gene_clusters(genepres, 
+                                data,
+                                args.upstream,
+                                args.downstream,
+                                args.downstream_start_codon,
+                                not args.no_filter)
+    iter_o = partial(cluster_cutter,
+                     klength=klength,
+                     stroi=stroi, 
+                     multiple_files=args.multiple_files,
+                     canon=not args.non_canonical,
+                     output=args.output)
+ 
+    pool = Pool(args.cores)
+    while True:
+        slice = itertools.islice(iter_i, args.cores * args.chunk)
+        ret = pool.map(iter_o, slice)
+        if len(ret) == 0:
+            break
+        pattern_hasher(ret, kmer_stroi,
+                            hash_pat, 
+                            kmer_hash,
+                            genepres,
+                            not args.no_filter,
+                            args.maf,
+                            args.output)
 
     if kmer_stroi is not None:
         kmer_stroi.close()

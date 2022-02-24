@@ -11,96 +11,92 @@ from .input import create_hash_files, create_kmer_stroi
 
 logger = logging.getLogger('panfeed.panfeed')
 
-def cluster_cutter(cluster_gen, klength, stroi, kmer_stroi, canon, output):
+def cluster_cutter(cluster_gen, klength, stroi, multiple_files, canon, output):
 #iterates through genes present in the cluster
 #shreds gene sequence into k-mers and adds them to the cluster dictionary
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
+    kmer_stroi = None
 
-    # set flag for multiple files
-    multiple_files = False
-    if kmer_stroi is None:
-        multiple_files = True
+    cluster, idx, clusterpresab = cluster_gen
+    logger.debug(f"Extracting k-mers from {idx}")
 
-    for cluster, idx, clusterpresab in cluster_gen:
-        logger.debug(f"Extracting k-mers from {idx}")
-
-        memchunk = StringIO()
-        if multiple_files:
-            # close existing file?
-            if kmer_stroi is not None:
-                kmer_stroi.close()
-            # we need to create the file
-            path = os.path.join(output, idx)
-            if not os.path.exists(path):
-                os.mkdir(path)
-            kmer_stroi = create_kmer_stroi(path)
-        
-        cluster_dict = {}
+    memchunk = StringIO()
+    if multiple_files:
+        # close existing file?
+        if kmer_stroi is not None:
+            kmer_stroi.close()
+        # we need to create the file
+        path = os.path.join(output, idx)
+        if not os.path.exists(path):
+            os.mkdir(path)
+        kmer_stroi = create_kmer_stroi(path)
     
-        sortstrain = {x: i
-                      for i, x in enumerate(sorted(cluster.keys()))}
-        n_strains = len(sortstrain)
+    cluster_dict = {}
 
-        for strain in cluster.keys():
-            for seq in cluster[strain]:
-                gene_id = seq.id
-                offset = seq.offset
+    sortstrain = {x: i
+                    for i, x in enumerate(sorted(cluster.keys()))}
+    n_strains = len(sortstrain)
 
-                num_kmer = len(seq.sequence) - klength + 1
-                seqlen = len(seq.sequence)
+    for strain in cluster.keys():
+        for seq in cluster[strain]:
+            gene_id = seq.id
+            offset = seq.offset
 
-                contig = seq.chromosome
-                strand = seq.strand
-                for pos in range(num_kmer):
-                    specseq = str(seq.sequence[pos:pos + klength])
-                    # get back to reverse complement
-                    revspecseq = str(seq.compsequence[pos:pos + klength])[::-1]
-                
-                    if canon == True:
-                        if specseq <= revspecseq:
-                            canonseq = specseq
-                            used_strand = strand
-                        else:
-                            canonseq = revspecseq
-                            used_strand = - strand
+            num_kmer = len(seq.sequence) - klength + 1
+            seqlen = len(seq.sequence)
 
-                        if canonseq not in cluster_dict:
-                            cluster_dict[f"{canonseq}"] = np.zeros(n_strains, dtype = int)
-                        cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
-                    else:
+            contig = seq.chromosome
+            strand = seq.strand
+            for pos in range(num_kmer):
+                specseq = str(seq.sequence[pos:pos + klength])
+                # get back to reverse complement
+                revspecseq = str(seq.compsequence[pos:pos + klength])[::-1]
+            
+                if canon == True:
+                    if specseq <= revspecseq:
+                        canonseq = specseq
                         used_strand = strand
-                        if specseq not in cluster_dict:
-                            cluster_dict[f"{specseq}"] = np.zeros(n_strains, dtype = int)
-                        cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-                        
-                        if revspecseq not in cluster_dict:
-                            cluster_dict[f"{revspecseq}"] = np.zeros(n_strains, dtype = int)
-                        cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
+                    else:
+                        canonseq = revspecseq
+                        used_strand = - strand
 
-                    if strain in stroi:
-                        if strand > 0:
-                            contigstart = seq.start
-                            truestart = contigstart + pos
-                            trueend = contigstart + pos + klength
+                    if canonseq not in cluster_dict:
+                        cluster_dict[f"{canonseq}"] = np.zeros(n_strains, dtype = int)
+                    cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
+                else:
+                    used_strand = strand
+                    if specseq not in cluster_dict:
+                        cluster_dict[f"{specseq}"] = np.zeros(n_strains, dtype = int)
+                    cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
+                    
+                    if revspecseq not in cluster_dict:
+                        cluster_dict[f"{revspecseq}"] = np.zeros(n_strains, dtype = int)
+                    cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
 
-                        else:
-                            contigstart = seq.end
-                            trueend = contigstart - pos
-                            truestart = contigstart - pos - klength
+                if strain in stroi:
+                    if strand > 0:
+                        contigstart = seq.start
+                        truestart = contigstart + pos
+                        trueend = contigstart + pos + klength
 
-                        genestart = pos - offset
-                        geneend = pos + klength - offset
-                        if canon == True:
-                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{canonseq}\n")
-                        else:
-                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
-                            memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
+                    else:
+                        contigstart = seq.end
+                        trueend = contigstart - pos
+                        truestart = contigstart - pos - klength
 
-        if multiple_files:
-            kmer_stroi.write(memchunk.getvalue())
-            memchunk = None
-         
-        yield idx, cluster_dict, clusterpresab, memchunk
+                    genestart = pos - offset
+                    geneend = pos + klength - offset
+                    if canon == True:
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{canonseq}\n")
+                    else:
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
+
+    if multiple_files:
+        kmer_stroi.write(memchunk.getvalue())
+        return idx, cluster_dict, clusterpresab, None
+    else:
+        return idx, cluster_dict, clusterpresab, str(memchunk.getvalue())
  
 
 def write_headers(hash_pat, kmer_hash, genepres):
@@ -151,7 +147,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash, genepres,
             write_headers(hash_pat, kmer_hash, genepres)
         else:
             if memchunk is not None:
-                kmer_stroi.write(memchunk.getvalue())
+                kmer_stroi.write(memchunk)
 
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
