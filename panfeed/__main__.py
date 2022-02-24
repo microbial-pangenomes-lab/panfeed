@@ -183,20 +183,35 @@ def main():
  
     patterns = set()
 
-    pool = Pool(args.cores)
-    while True:
-        slice = itertools.islice(iter_i, args.cores * args.chunk)
-        ret = pool.map(iter_o, slice)
-        if len(ret) == 0:
-            break
-        patterns = pattern_hasher(ret, kmer_stroi,
-                                  hash_pat, 
-                                  kmer_hash,
-                                  genepres,
-                                  not args.no_filter,
-                                  args.maf,
-                                  args.output,
-                                  patterns)
+    if args.cores > 1:
+        pool = Pool(args.cores)
+        while True:
+            slice = itertools.islice(iter_i, args.cores * args.chunk)
+            ret = pool.map(iter_o, slice)
+            if len(ret) == 0:
+                break
+            patterns = pattern_hasher(ret, kmer_stroi,
+                                      hash_pat, 
+                                      kmer_hash,
+                                      genepres,
+                                      not args.no_filter,
+                                      args.maf,
+                                      args.output,
+                                      patterns)
+    else:
+        for x in iter_i:
+            ret = iter_o(x)
+            if len(ret) == 0:
+                continue
+            patterns = pattern_hasher((ret,), kmer_stroi,
+                                      hash_pat, 
+                                      kmer_hash,
+                                      genepres,
+                                      not args.no_filter,
+                                      args.maf,
+                                      args.output,
+                                      patterns)
+
 
     if kmer_stroi is not None:
         kmer_stroi.close()
