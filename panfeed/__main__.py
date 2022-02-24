@@ -9,10 +9,10 @@ import logging.handlers
 from .__init__ import __version__
 from .colorlog import ColorFormatter
 
-from .panfeed import prep_data_n_fasta, what_are_my_inputfiles, set_input_output
-from .panfeed import clean_up_fasta, what_are_my_inputfiles, set_input_output
-from .panfeed import cluster_cutter, pattern_hasher, create_faidx, parse_gff
-from .panfeed import iter_gene_clusters, Feature
+from .input import prep_data_n_fasta, what_are_my_inputfiles, set_input_output
+from .input import clean_up_fasta, what_are_my_inputfiles, set_input_output
+from .panfeed import cluster_cutter, pattern_hasher, write_headers
+from .input import iter_gene_clusters
 
 
 logger = logging.getLogger('panfeed')
@@ -149,9 +149,10 @@ def main():
 
     logger.info("Preparing inputs")
     data = prep_data_n_fasta(filelist, args.gff, args.output)
-    
-    kmer_pattern_dict = {}
-    
+
+    if not args.multiple_files:
+        write_headers(hash_pat, kmer_hash, genepres)
+
     logger.info("Extracting k-mers")
     pattern_hasher(cluster_cutter(iter_gene_clusters(genepres, 
                                                      data,
@@ -164,16 +165,13 @@ def main():
                                   kmer_stroi,
                                   not args.non_canonical,
                                   args.output),
+                   kmer_stroi,
                    hash_pat, 
                    kmer_hash,
                    genepres,
                    not args.no_filter,
                    args.maf,
                    args.output)
-
-    # nd = time()
-
-    # print(nd - strt)
 
     if kmer_stroi is not None:
         kmer_stroi.close()
