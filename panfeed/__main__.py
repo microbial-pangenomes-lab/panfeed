@@ -5,14 +5,17 @@ import sys
 import logging
 import argparse
 import logging.handlers
+from functools import partial
+import itertools
+from multiprocessing import Pool
 
 from .__init__ import __version__
 from .colorlog import ColorFormatter
 
-from .panfeed import prep_data_n_fasta, what_are_my_inputfiles, set_input_output
-from .panfeed import clean_up_fasta, what_are_my_inputfiles, set_input_output
-from .panfeed import cluster_cutter, pattern_hasher, create_faidx, parse_gff
-from .panfeed import iter_gene_clusters, Feature
+from .input import prep_data_n_fasta, what_are_my_inputfiles, set_input_output
+from .input import clean_up_fasta, what_are_my_inputfiles, set_input_output
+from .panfeed import cluster_cutter, pattern_hasher, write_headers
+from .input import iter_gene_clusters
 
 
 logger = logging.getLogger('panfeed')
@@ -109,6 +112,17 @@ def get_options():
                         help = "Generate one set of outputs for each "
                                "gene cluster (default: one set of outputs)")
 
+    parser.add_argument("--cores",
+                        type = int,
+                        default = 1,
+                        help = "Threads (default: %(default)d)")
+
+    parser.add_argument("--chunk",
+                        type = int,
+                        default = 100,
+                        help = "How many clusters to assign to each thread "
+                               "(default: %(default)d)")
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -149,31 +163,55 @@ def main():
 
     logger.info("Preparing inputs")
     data = prep_data_n_fasta(filelist, args.gff, args.output)
-    
-    kmer_pattern_dict = {}
-    
+
+    if not args.multiple_files:
+        write_headers(hash_pat, kmer_hash, genepres)
+
     logger.info("Extracting k-mers")
-    pattern_hasher(cluster_cutter(iter_gene_clusters(genepres, 
-                                                     data,
-                                                     args.upstream,
-                                                     args.downstream,
-                                                     args.downstream_start_codon,
-                                                     not args.no_filter),
-                                  klength,
-                                  stroi, 
-                                  kmer_stroi,
-                                  not args.non_canonical,
-                                  args.output),
-                   hash_pat, 
-                   kmer_hash,
-                   genepres,
-                   not args.no_filter,
-                   args.maf,
-                   args.output)
+    iter_i = iter_gene_clusters(genepres, 
+                                data,
+                                args.upstream,
+                                args.downstream,
+                                args.downstream_start_codon,
+                                not args.no_filter)
+    iter_o = partial(cluster_cutter,
+                     klength=klength,
+                     stroi=stroi, 
+                     multiple_files=args.multiple_files,
+                     canon=not args.non_canonical,
+                     output=args.output)
+ 
+    patterns = set()
 
-    # nd = time()
+    if args.cores > 1:
+        pool = Pool(args.cores)
+        while True:
+            slice = itertools.islice(iter_i, args.cores * args.chunk)
+            ret = pool.map(iter_o, slice)
+            if len(ret) == 0:
+                break
+            patterns = pattern_hasher(ret, kmer_stroi,
+                                      hash_pat, 
+                                      kmer_hash,
+                                      genepres,
+                                      not args.no_filter,
+                                      args.maf,
+                                      args.output,
+                                      patterns)
+    else:
+        for x in iter_i:
+            ret = iter_o(x)
+            if len(ret) == 0:
+                continue
+            patterns = pattern_hasher((ret,), kmer_stroi,
+                                      hash_pat, 
+                                      kmer_hash,
+                                      genepres,
+                                      not args.no_filter,
+                                      args.maf,
+                                      args.output,
+                                      patterns)
 
-    # print(nd - strt)
 
     if kmer_stroi is not None:
         kmer_stroi.close()
