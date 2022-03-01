@@ -161,12 +161,6 @@ def get_options():
                         default = 1,
                         help = "Threads (default: %(default)d)")
 
-    parser.add_argument("--chunk",
-                        type = int,
-                        default = 100,
-                        help = "How many clusters to assign to each thread "
-                               "(default: %(default)d)")
-
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
