@@ -39,13 +39,13 @@ def worker(f, read_q, write_q):
     while True:
         work = read_q.get()
         if work is None:
-            logger.debug('Worker process finished')
+            logger.debug("Worker process finished")
             write_q.put(None)
             return
         
         ret = f(work)
         if len(ret) == 0:
-            logger.debug('Worker process finished')
+            logger.debug("Worker process finished")
             write_q.put(None)
             return
         write_q.put((ret,))
@@ -55,7 +55,7 @@ def reader(iter_i, read_q, n):
     for x in iter_i:
         read_q.put(x)
         
-    logger.debug('Reader process finished')
+    logger.debug("Reader process finished")
 
     # poison pill
     # one for each worker
@@ -72,8 +72,9 @@ def writer(f, write_q, n):
         work = write_q.get()
         if work is None:
             dead += 1
-            logger.debug(f'Finished worker processes {dead}/{n}')
+            logger.debug(f"Finished worker processes {dead}/{n}")
             if dead == n:
+                logger.debug("All worker processes are finished")
                 return
             continue
         patterns = f(work, patterns=patterns)
@@ -159,7 +160,8 @@ def get_options():
     parser.add_argument("--cores",
                         type = int,
                         default = 1,
-                        help = "Threads (default: %(default)d)")
+                        help = "Threads (default: %(default)d, at least 3 "
+                               "are needed for parallelization)")
 
     parser.add_argument("-v", action='count',
                         default=0,
@@ -231,6 +233,7 @@ def main():
                      patterns=patterns)
  
     if args.cores > 2:
+        # thanks to @SamStudio8 for the inspiration
         read_q = Queue()
         write_q = Queue()
         
@@ -266,7 +269,7 @@ def main():
                 ),
             )
             processes.append(p)
-        logger.debug(f'Started {args.cores - 2} worker processes')
+        logger.debug(f"Started {args.cores - 2} worker processes")
 
         for p in processes:
             p.start()
@@ -274,6 +277,10 @@ def main():
         for p in processes:
             p.join()
     else:
+        if args.cores > 1:
+            logger.warning("Need at least 3 cores for parallelization")
+            logger.warning("Running a single thread")
+
         patterns = set()
         for x in iter_i:
             ret = iter_o(x)
