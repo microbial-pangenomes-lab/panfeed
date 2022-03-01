@@ -108,9 +108,11 @@ def write_headers(hash_pat, kmer_hash, genepres):
         memchonkheader1.write(f"\t{strain}")
     memchonkheader1.write("\n")
     hash_pat.write(memchonkheader1.getvalue())
+    hash_pat.flush()
 
     memchonkheader2.write("k-mer\thashed_pattern\n")
     kmer_hash.write(memchonkheader2.getvalue())
+    kmer_hash.flush()
 
 
 def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
@@ -197,6 +199,9 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
         if multiple_files:
             memchunkhash_pat = None
             memchunkkmer_hash = None
+
+    hash_pat.flush()
+    kmer_hash.flush()
 
     return patterns
 

@@ -7,7 +7,7 @@ import argparse
 import logging.handlers
 from functools import partial
 import itertools
-from multiprocessing import Pool
+from multiprocessing import Process, Queue
 
 from .__init__ import __version__
 from .colorlog import ColorFormatter
@@ -33,6 +33,50 @@ def set_logging(v):
     formatter = ColorFormatter('%(asctime)s - %(name)s - $COLOR%(message)s$RESET','%H:%M:%S')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+
+def worker(f, read_q, write_q):
+    while True:
+        work = read_q.get()
+        if work is None:
+            logger.debug('Worker process finished')
+            write_q.put(None)
+            return
+        
+        ret = f(work)
+        if len(ret) == 0:
+            logger.debug('Worker process finished')
+            write_q.put(None)
+            return
+        write_q.put((ret,))
+        
+
+def reader(iter_i, read_q, n):
+    for x in iter_i:
+        read_q.put(x)
+        
+    logger.debug('Reader process finished')
+
+    # poison pill
+    # one for each worker
+    for _ in range(n):
+        read_q.put(None)
+
+
+def writer(f, write_q, n):
+    dead = 0
+
+    patterns = set()
+
+    while True:
+        work = write_q.get()
+        if work is None:
+            dead += 1
+            logger.debug(f'Finished worker processes {dead}/{n}')
+            if dead == n:
+                return
+            continue
+        patterns = f(work, patterns=patterns)
 
 
 def get_options():
@@ -180,37 +224,69 @@ def main():
                      multiple_files=args.multiple_files,
                      canon=not args.non_canonical,
                      output=args.output)
- 
+   
     patterns = set()
+    func_w = partial(pattern_hasher,
+                     kmer_stroi=kmer_stroi,
+                     hash_pat=hash_pat, 
+                     kmer_hash=kmer_hash,
+                     genepres=genepres,
+                     patfilt=not args.no_filter,
+                     maf=args.maf,
+                     output=args.output,
+                     patterns=patterns)
+ 
+    if args.cores > 2:
+        read_q = Queue()
+        write_q = Queue()
+        
+        processes = []
 
-    if args.cores > 1:
-        pool = Pool(args.cores)
-        while True:
-            slice = itertools.islice(iter_i, args.cores * args.chunk)
-            ret = pool.map(iter_o, slice)
-            if len(ret) == 0:
-                break
-            patterns = pattern_hasher(ret, kmer_stroi,
-                                      hash_pat, 
-                                      kmer_hash,
-                                      genepres,
-                                      not args.no_filter,
-                                      args.maf,
-                                      args.output,
-                                      patterns)
+        reader_process = Process(
+            target=reader,
+            args=(
+                iter_i,
+                read_q,
+                args.cores - 2
+            ),
+        )
+        processes.append(reader_process)
+
+        writer_process = Process(
+            target=writer,
+            args=(
+                func_w,
+                write_q,
+                args.cores - 2,
+            ),
+        )
+        processes.append(writer_process)
+
+        for i in range(args.cores - 2):
+            p = Process(
+                target=worker,
+                args=(
+                    iter_o,
+                    read_q,
+                    write_q,
+                ),
+            )
+            processes.append(p)
+        logger.debug(f'Started {args.cores - 2} worker processes')
+
+        for p in processes:
+            p.start()
+
+        for p in processes:
+            p.join()
     else:
+        patterns = set()
         for x in iter_i:
             ret = iter_o(x)
             if len(ret) == 0:
                 continue
-            patterns = pattern_hasher((ret,), kmer_stroi,
-                                      hash_pat, 
-                                      kmer_hash,
-                                      genepres,
-                                      not args.no_filter,
-                                      args.maf,
-                                      args.output,
-                                      patterns)
+            patterns = func_w((ret,),
+                              patterns=patterns)
 
 
     if kmer_stroi is not None:
