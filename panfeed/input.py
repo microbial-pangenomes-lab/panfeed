@@ -70,7 +70,7 @@ def clean_up_fasta(filelist, output):
             logger.warning(f"Could not delete {faidx_file}")
 
 
-def set_input_output(stroi_in, presence_absence, output, single_file=True):
+def set_input_output(stroi_in, genes_in, presence_absence, output, single_file=True):
     # determines the names of the input, output files 
    
     logger.debug(f"Loading pangenome file from panaroo ({presence_absence})")
@@ -89,7 +89,16 @@ def set_input_output(stroi_in, presence_absence, output, single_file=True):
     else:
         logger.warning(f"No target strains provided")
         stroi = ""
-    
+
+    if genes_in is not None:
+        logger.debug(f"Loading target gene clusters ({genes_in})")
+        genes = set()
+        genesfile = open(f"{genes_in}", "r")
+        for line in genesfile:
+            genes.add(line.rstrip("\n"))
+    else:
+        genes = None
+
     if os.path.exists(output):
         logger.error(f"Output directory {output} exists! Please "
                       "remove it and restart")
@@ -109,7 +118,7 @@ def set_input_output(stroi_in, presence_absence, output, single_file=True):
         hash_pat = None
         kmer_hash = None
 
-    return stroi, kmer_stroi, hash_pat, kmer_hash, genepres
+    return stroi, genes, kmer_stroi, hash_pat, kmer_hash, genepres
 
 
 def create_kmer_stroi(output):
@@ -197,11 +206,16 @@ def parse_gff(file_name, feature_types=None):
     return features
 
 
-def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt):
+def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt,
+                       gene_list=None):
     
     # go through each gene cluster
     all_ogs = panaroo.shape[0]
     for i, (idx, row) in enumerate(panaroo.iterrows()):
+        if gene_list is not None and idx not in gene_list:
+            logger.debug(f"Skipping {idx} ({i+1}/{all_ogs})")
+            continue
+
         logger.debug(f"Extracting sequences from {idx} ({i+1}/{all_ogs})")
         # output dict
         # key: strain

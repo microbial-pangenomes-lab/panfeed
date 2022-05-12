@@ -97,6 +97,13 @@ def get_options():
                                "(one sample name per line, "
                                "default: no samples)")
 
+    parser.add_argument("--genes",
+                        default=None,
+                        help = "File indicating for which gene clusters "
+                               "k-mer positions and patterns should be logged "
+                               "(one gene cluster ID per line, "
+                               "default: all gene clusters)")
+
     parser.add_argument("-o", "--output",
                         default = "panfeed",
                         help = "Output directory to store outputs "
@@ -195,8 +202,9 @@ def main():
     data = {}
 
     logger.info("Preparing output files")
-    (stroi, kmer_stroi, hash_pat,
+    (stroi, genes, kmer_stroi, hash_pat,
      kmer_hash, genepres) = set_input_output(args.targets,
+                                             args.genes,
                                              args.presence_absence,
                                              args.output,
                                              not args.multiple_files)
@@ -213,7 +221,8 @@ def main():
                                 args.upstream,
                                 args.downstream,
                                 args.downstream_start_codon,
-                                not args.no_filter)
+                                not args.no_filter,
+                                genes)
     iter_o = partial(cluster_cutter,
                      klength=klength,
                      stroi=stroi, 
