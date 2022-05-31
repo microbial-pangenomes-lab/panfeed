@@ -48,7 +48,7 @@ def worker(f, read_q, write_q):
             logger.debug("Worker process finished")
             write_q.put(None)
             return
-        write_q.put((ret,)timeout = 300)
+        write_q.put((ret,),timeout = 300)
         
 
 def reader(iter_i, read_q, n):
