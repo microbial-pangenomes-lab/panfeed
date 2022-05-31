@@ -48,7 +48,7 @@ def worker(f, read_q, write_q):
             logger.debug("Worker process finished")
             write_q.put(None)
             return
-        write_q.put((ret,))
+        write_q.put((ret,)timeout = 300)
         
 
 def reader(iter_i, read_q, n):
@@ -169,7 +169,16 @@ def get_options():
                         default = 1,
                         help = "Threads (default: %(default)d, at least 3 "
                                "are needed for parallelization)")
-
+    
+    parser.add_argument("-ql", "--queue_limit",
+                        type = int,
+                        default = 3,
+                        help = "limit on items that may be put into the reading"
+                               "and writing queues. (default: %(default)d)"
+                               "this option is only relevant for cores > 1"
+                               "reading queue limit = ql * cores"
+                               "writing queue limit = ql")
+    
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -182,7 +191,9 @@ def get_options():
 def main():
     args = get_options()
 
-    set_logging(args.v)    
+    set_logging(args.v)
+    
+    qlimit = args.queue_limit
 
     klength = args.kmer_length
     
@@ -243,8 +254,8 @@ def main():
  
     if args.cores > 2:
         # thanks to @SamStudio8 for the inspiration
-        read_q = Queue()
-        write_q = Queue()
+        read_q = Queue(maxsize = qlimit * args.cores)
+        write_q = Queue(maxsize = qlimit)
         
         processes = []
 
