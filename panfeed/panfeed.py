@@ -110,7 +110,7 @@ def write_headers(hash_pat, kmer_hash, genepres):
     hash_pat.write(memchonkheader1.getvalue())
     hash_pat.flush()
 
-    memchonkheader2.write("k-mer\thashed_pattern\n")
+    memchonkheader2.write("cluster\tk-mer\thashed_pattern\n")
     kmer_hash.write(memchonkheader2.getvalue())
     kmer_hash.flush()
 
@@ -159,7 +159,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
         pattern = clusterpresab.view(np.uint8)
         hashed = hashlib.md5(pattern)
         khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-        memchunkkmer_hash.write(f"{idx}\t{khash}\n")
+        memchunkkmer_hash.write(f"{idx}\t\t{khash}\n")
         
         if khash not in patterns:
             patterns.add(khash)
@@ -180,7 +180,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
             pattern = cluster_dict[kmer].view(np.uint8)
             hashed = hashlib.md5(pattern)
             khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
-            memchunkkmer_hash.write(f"{kmer}\t{khash}\n")
+            memchunkkmer_hash.write(f"{idx}\t{kmer}\t{khash}\n")
             
             if khash in patterns:
                 continue
