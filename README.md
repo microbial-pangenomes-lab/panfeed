@@ -41,6 +41,9 @@ Directory which contains all the GFF files. They must also contain the genome se
 	--targets
 File indicating, for which samples the k-mer positions should be logged. a simple text file containing the sample names suffices.
 
+	--genes
+File indicating, for which gene clusters k-mer positions should be logged. By default all clusters will be logged.
+
 	-o --output
 Name of the output directory. If the directory already exists, an error will be raised.
 
@@ -70,6 +73,12 @@ By default panfeed filters out all k-mers that have the same presence absence pa
 
 	--multiple-files
 Activating this option will generate one set of output files for each gene cluster.
+
+	--cores
+Number of cores to use. At least 3 are needed for parallelization.
+
+	-ql --queue_limit
+limit on items that may be put into the reading and writing queues. By default writing_queue is limited to 3 items and reading_queue to 3*nr_of_cores. Only relevant for cores >= 3.
 
 	-v
 If this option is used, the verbosity of the displayed information is increased.
