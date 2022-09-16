@@ -18,7 +18,7 @@ def what_are_my_inputfiles(gffdir): # adds all the GFF files in the directory to
     for file in os.listdir(gffdir):
         only_file = os.path.split(file)[-1]
         if file.endswith(".gff" or "gff"):
-            genome = only_file.split(".")[0]
+            genome = ".".join(only_file.split(".")[:-1])
             logger.debug(f"Adding {genome} ({file})")
             filelist.append(genome)
         else:
