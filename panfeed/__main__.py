@@ -158,6 +158,13 @@ def get_options():
                                "presence absence pattern as the gene "
                                "cluster itself")
 
+    parser.add_argument("--consider-missing",
+                        action = "store_true",
+                        default = False,
+                        help = "Output NaN for strains that do not encode "
+                               "for a k-mer if the gene is missing "
+                               "(default: value is set to 0, as for the gene)")
+
     parser.add_argument("--multiple-files",
                         action = "store_true",
                         default = False,
@@ -239,6 +246,7 @@ def main():
                      stroi=stroi, 
                      multiple_files=args.multiple_files,
                      canon=not args.non_canonical,
+                     consider_missing_cluster=args.consider_missing,
                      output=args.output)
    
     patterns = set()

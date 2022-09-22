@@ -5,13 +5,24 @@ import logging
 import numpy as np
 import hashlib
 import binascii
+from copy import deepcopy
 from io import StringIO
 
 from .input import create_hash_files, create_kmer_stroi
 
 logger = logging.getLogger('panfeed.panfeed')
 
-def cluster_cutter(cluster_gen, klength, stroi, multiple_files, canon, output):
+
+def init_presabs_vector(n_strains, clusterpresab, missing_nan=False):
+    v = np.zeros(n_strains, dtype=np.float64)
+    if missing_nan:
+        v[clusterpresab == 0] = np.nan
+    return v
+
+
+def cluster_cutter(cluster_gen, klength, stroi,
+                   multiple_files, canon, consider_missing_cluster,
+                   output):
 #iterates through genes present in the cluster
 #shreds gene sequence into k-mers and adds them to the cluster dictionary
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
@@ -30,12 +41,15 @@ def cluster_cutter(cluster_gen, klength, stroi, multiple_files, canon, output):
         if not os.path.exists(path):
             os.mkdir(path)
         kmer_stroi = create_kmer_stroi(path)
-    
+
     cluster_dict = {}
 
     sortstrain = {x: i
                     for i, x in enumerate(sorted(cluster.keys()))}
     n_strains = len(sortstrain)
+
+    base_vector = init_presabs_vector(n_strains, clusterpresab,
+                                      consider_missing_cluster)
 
     for strain in cluster.keys():
         for seq in cluster[strain]:
@@ -60,18 +74,18 @@ def cluster_cutter(cluster_gen, klength, stroi, multiple_files, canon, output):
                         canonseq = revspecseq
                         used_strand = - strand
 
-                    if canonseq not in cluster_dict:
-                        cluster_dict[f"{canonseq}"] = np.zeros(n_strains, dtype = int)
-                    cluster_dict[f"{canonseq}"][sortstrain[strain]] = 1
+                    cluster_dict[canonseq] = cluster_dict.get(canonseq,
+                                                              deepcopy(base_vector))
+                    cluster_dict[canonseq][sortstrain[strain]] = 1
                 else:
                     used_strand = strand
-                    if specseq not in cluster_dict:
-                        cluster_dict[f"{specseq}"] = np.zeros(n_strains, dtype = int)
-                    cluster_dict[f"{specseq}"][sortstrain[strain]] = 1
-                    
-                    if revspecseq not in cluster_dict:
-                        cluster_dict[f"{revspecseq}"] = np.zeros(n_strains, dtype = int)
-                    cluster_dict[f"{revspecseq}"][sortstrain[strain]] = 1
+                    cluster_dict[specseq] = cluster_dict.get(specseq,
+                                                             deepcopy(base_vector))
+                    cluster_dict[specseq][sortstrain[strain]] = 1
+
+                    cluster_dict[revspecseq] = cluster_dict.get(revspecseq,
+                                                                deepcopy(base_vector))
+                    cluster_dict[revspecseq][sortstrain[strain]] = 1
 
                 if strain in stroi:
                     if strand > 0:
@@ -156,18 +170,23 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
         
-        pattern = clusterpresab.view(np.uint8)
-        hashed = hashlib.md5(pattern)
+        patterntup = "\t".join(['' if np.isnan(x)
+                                else str(int(x))
+                                for x in clusterpresab])
+
+        hashed = hashlib.md5(patterntup.encode())
         khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
         memchunkkmer_hash.write(f"{idx}\t\t{khash}\n")
         
         if khash not in patterns:
             patterns.add(khash)
-            patterntup = "\t".join(map(str, clusterpresab))
             memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
         
         for kmer in cluster_dict:
-            af = cluster_dict[kmer].sum() / cluster_dict[kmer].shape[0]
+            # be aware of missing values
+            k_presab = cluster_dict[kmer]
+            k_presab = k_presab[~np.isnan(k_presab)]
+            af = k_presab.sum() / k_presab.shape[0]
             if af >= 0.5:
                 af = 1-af
             if af < maf:
@@ -177,8 +196,11 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
                 if tuple(cluster_dict[kmer]) == tuple(clusterpresab):
                     continue
 
-            pattern = cluster_dict[kmer].view(np.uint8)
-            hashed = hashlib.md5(pattern)
+            patterntup = "\t".join(['' if np.isnan(x)
+                                    else str(int(x))
+                                    for x in cluster_dict[kmer]])
+
+            hashed = hashlib.md5(patterntup.encode())
             khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
             memchunkkmer_hash.write(f"{idx}\t{kmer}\t{khash}\n")
             
@@ -189,8 +211,6 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
             if not multiple_files and not len(patterns) % 1000:
                 logger.debug(f"Observed patterns so far: {len(patterns)}")
 
-            patterntup = "\t".join(map(str, cluster_dict[kmer]))
-                        
             memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
 
         hash_pat.write(memchunkhash_pat.getvalue())
