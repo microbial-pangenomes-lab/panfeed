@@ -125,7 +125,7 @@ def create_kmer_stroi(output):
     kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
     
     #creates the header for the strains of interest output file
-    kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
+    kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tfeature_strand\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
 
     return kmer_stroi
 
@@ -240,7 +240,7 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
 
         # print(clusterpresab)
         # cycle through all the strains that have the gene
-        for strain, genes in row.dropna().iteritems():
+        for strain, genes in row.dropna().items():
             
             strain = str(strain)
             
