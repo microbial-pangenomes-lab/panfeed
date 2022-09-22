@@ -69,10 +69,10 @@ def cluster_cutter(cluster_gen, klength, stroi,
                 if canon == True:
                     if specseq <= revspecseq:
                         canonseq = specseq
-                        used_strand = strand
+                        used_strand = 1
                     else:
                         canonseq = revspecseq
-                        used_strand = - strand
+                        used_strand = -1 
 
                     cluster_dict[canonseq] = cluster_dict.get(canonseq,
                                                               deepcopy(base_vector))
@@ -101,10 +101,10 @@ def cluster_cutter(cluster_gen, klength, stroi,
                     genestart = pos - offset
                     geneend = pos + klength - offset
                     if canon == True:
-                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{canonseq}\n")
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{strand}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{canonseq}\n")
                     else:
-                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
-                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{strand}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
+                        memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{strand}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
 
     if multiple_files:
         kmer_stroi.write(memchunk.getvalue())
