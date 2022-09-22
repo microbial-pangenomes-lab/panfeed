@@ -126,6 +126,7 @@ def create_kmer_stroi(output):
     
     #creates the header for the strains of interest output file
     kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tfeature_strand\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
+    kmer_stroi.flush()
 
     return kmer_stroi
 
