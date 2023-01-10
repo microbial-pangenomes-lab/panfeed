@@ -130,7 +130,8 @@ def write_headers(hash_pat, kmer_hash, genepres):
 
 
 def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
-                   genepres, patfilt, maf, output, patterns=None):
+                   genepres, patfilt, maf, output, patterns=None,
+                   consider_missing_cluster=False):
     #iterates through the cluster dictionary output by cluster_cutter()
     #outputs the hashed patterns, patterns and k-mers to the output files
     #two files are created: hashed k-mer patterns to presence/absence patterns
@@ -169,24 +170,29 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
 
         memchunkhash_pat = StringIO()
         memchunkkmer_hash = StringIO()
-        
-        patterntup = "\t".join(['' if np.isnan(x)
-                                else str(int(x))
-                                for x in clusterpresab])
-
-        hashed = hashlib.md5(patterntup.encode())
+       
+        hashed = hashlib.md5(clusterpresab.view(np.uint8))
         khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
         memchunkkmer_hash.write(f"{idx}\t\t{khash}\n")
         
         if khash not in patterns:
             patterns.add(khash)
+            if not consider_missing_cluster:
+                patterntup = "\t".join(map(str, clusterpresab))
+            else:
+                patterntup = "\t".join(['' if np.isnan(x)
+                                        else str(int(x))
+                                        for x in clusterpresab])
             memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
         
         for kmer in cluster_dict:
-            # be aware of missing values
-            k_presab = cluster_dict[kmer]
-            k_presab = k_presab[~np.isnan(k_presab)]
-            af = k_presab.sum() / k_presab.shape[0]
+            if not consider_missing_cluster:
+                af = cluster_dict[kmer].sum() / cluster_dict[kmer].shape[0]
+            else:
+                # be aware of missing values
+                k_presab = cluster_dict[kmer]
+                k_presab = k_presab[~np.isnan(k_presab)]
+                af = k_presab.sum() / k_presab.shape[0]
             if af >= 0.5:
                 af = 1-af
             if af < maf:
@@ -196,11 +202,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
                 if tuple(cluster_dict[kmer]) == tuple(clusterpresab):
                     continue
 
-            patterntup = "\t".join(['' if np.isnan(x)
-                                    else str(int(x))
-                                    for x in cluster_dict[kmer]])
-
-            hashed = hashlib.md5(patterntup.encode())
+            hashed = hashlib.md5(cluster_dict[kmer].view(np.uint8))
             khash = binascii.b2a_base64(hashed.digest()).decode()[:24]
             memchunkkmer_hash.write(f"{idx}\t{kmer}\t{khash}\n")
             
@@ -211,6 +213,12 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
             if not multiple_files and not len(patterns) % 1000:
                 logger.debug(f"Observed patterns so far: {len(patterns)}")
 
+            if not consider_missing_cluster:
+                patterntup = "\t".join(map(str, cluster_dict[kmer]))
+            else: 
+                patterntup = "\t".join(['' if np.isnan(x)
+                                        else str(int(x))
+                                        for x in cluster_dict[kmer]])
             memchunkhash_pat.write(f"{khash}\t{patterntup}\n")
 
         hash_pat.write(memchunkhash_pat.getvalue())
