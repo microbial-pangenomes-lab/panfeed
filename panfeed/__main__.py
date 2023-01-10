@@ -163,7 +163,8 @@ def get_options():
                         default = False,
                         help = "Output NaN for strains that do not encode "
                                "for a k-mer if the gene is missing "
-                               "(default: value is set to 0, as for the gene)")
+                               "(default: value is set to 0, as for the gene. "
+                               "WARNING: slows down execution)")
 
     parser.add_argument("--multiple-files",
                         action = "store_true",
@@ -257,8 +258,9 @@ def main():
                      genepres=genepres,
                      patfilt=not args.no_filter,
                      maf=args.maf,
+                     consider_missing_cluster=args.consider_missing,
                      output=args.output,
-                     patterns=patterns)
+                     patterns=patterns,)
  
     if args.cores > 2:
         # thanks to @SamStudio8 for the inspiration
