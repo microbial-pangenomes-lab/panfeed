@@ -178,7 +178,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
         if khash not in patterns:
             patterns.add(khash)
             if not consider_missing_cluster:
-                patterntup = "\t".join(map(str, clusterpresab))
+                patterntup = "\t".join(map(str, clusterpresab.astype(np.uint8)))
             else:
                 patterntup = "\t".join(['' if np.isnan(x)
                                         else str(int(x))
@@ -214,7 +214,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
                 logger.debug(f"Observed patterns so far: {len(patterns)}")
 
             if not consider_missing_cluster:
-                patterntup = "\t".join(map(str, cluster_dict[kmer]))
+                patterntup = "\t".join(map(str, cluster_dict[kmer].astype(np.uint8)))
             else: 
                 patterntup = "\t".join(['' if np.isnan(x)
                                         else str(int(x))
