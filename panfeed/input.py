@@ -12,39 +12,71 @@ from .classes import Feature, Seqinfo
 logger = logging.getLogger('panfeed.input')
 
 
-def what_are_my_inputfiles(gffdir): # adds all the GFF files in the directory to a list
-    filelist = []
-    
+def what_are_my_inputfiles(gffdir, fastadir=None): # adds all the GFF files in the directory to a list
+    filelist = set()
+    fastalist = set()
+
     for file in os.listdir(gffdir):
         only_file = os.path.split(file)[-1]
-        if file.endswith(".gff" or "gff"):
+        if file.endswith(".gff"):
             genome = ".".join(only_file.split(".")[:-1])
             logger.debug(f"Adding {genome} ({file})")
-            filelist.append(genome)
+            filelist.add(genome)
         else:
             logger.debug(f"Ignoring {file}")
-            
+
+    if fastadir is not None:
+        # check which of the GFF files have a corresponding
+        # nucleotide fasta file
+        for file in os.listdir(fastadir):
+            only_file = os.path.split(file)[-1]
+            if file.endswith(".fasta") or file.endswith(".fna"):
+                genome = ".".join(only_file.split(".")[:-1])
+                if genome in filelist:
+                    logger.debug(f"Adding {genome} nucleotides ({file})")
+                    fastalist.add(genome)
+                else:
+                    logger.debug(f"Ignoring {genome} (no corresponding gff)")
+            else:
+                logger.debug(f"Ignoring {file}")
+
+
     if len(filelist) == 0:
         logger.error(f"No GFF files found in working directory ({gffdir})")
         sys.exit(1)
         
-    return filelist
+    return sorted(filelist), sorted(fastalist)
 
 
-def prep_data_n_fasta(filelist, gffdir, output): # prepares the hybrid GFF files and creates fasta files
+def prep_data_n_fasta(filelist, fastalist,
+                      gffdir, fastadir, output): # prepares the hybrid GFF files and creates fasta files
     data = {}
     
     for genome in filelist:
         logger.debug(f"Handling {genome}")
-        logger.debug(f"Creating fasta file for {genome}")
+
+        if genome not in fastalist:
+            logger.debug(f"Creating fasta file for {genome}")
+            
+            txtfile = open(os.path.join(output, f"{genome}.fasta"), "w")
+            txtfile.write(open(os.path.join(gffdir, f"{genome}.gff"), "r").read().split("##FASTA")[1])
+            txtfile.close()
         
-        txtfile = open(os.path.join(output, f"{genome}.fasta"), "w")
-        txtfile.write(open(os.path.join(gffdir, f"{genome}.gff"), "r").read().split("##FASTA")[1])
-        txtfile.close()
-    
-        logger.debug(f"Creating faidx file for {genome}")
-        sequences = create_faidx(os.path.join(output, f'{genome}.fasta'))
-    
+            logger.debug(f"Creating faidx file for {genome}")
+            sequences = create_faidx(os.path.join(output, f'{genome}.fasta'))
+        else:
+            logger.debug(f"Creating faidx file for existing nucleotide sequence {genome}")
+            file1 = os.path.join(fastadir, f'{genome}.fna')
+            file2 = os.path.join(fastadir, f'{genome}.fasta')
+            if os.path.exists(file1):
+                ffile = file1
+            elif os.path.exists(file2):
+                ffile = file2
+            else:
+                logger.error(f"Neither {genome}.fna not {genome}.fasta found in {fastadir}")
+                sys.exit(1)
+            sequences = create_faidx(ffile)
+
         logger.debug(f"Parsing features for {genome}")
         features = parse_gff(os.path.join(gffdir, f'{genome}.gff'))
     
@@ -53,18 +85,29 @@ def prep_data_n_fasta(filelist, gffdir, output): # prepares the hybrid GFF files
     return data
 
 
-def clean_up_fasta(filelist, output):
+def clean_up_fasta(filelist, fastalist, output, fastadir):
     for genome in filelist:
-        fasta_file = os.path.join(output, f"{genome}.fasta")
-        logger.debug(f"Removing fasta file for {genome} ({fasta_file})")
-        if os.path.isfile(fasta_file):
-            os.remove(fasta_file)
+        if genome in fastalist:
+            logger.debug(f"Keeping fasta file for {genome}")
         else:
-            logger.warning(f"Could not delete {fasta_file}")
+            fasta_file = os.path.join(output, f"{genome}.fasta")
+            logger.debug(f"Removing fasta file for {genome} ({fasta_file})")
+            if os.path.exists(fasta_file):
+                os.remove(fasta_file)
+            else:
+                logger.warning(f"Could not delete {fasta_file}")
         
-        faidx_file = os.path.join(output, f"{genome}.fasta.fai")
+        if genome not in fastalist:
+            faidx_file = os.path.join(output, f"{genome}.fasta.fai")
+        else:
+            faidx_file1 = os.path.join(fastadir, f"{genome}.fasta.fai")
+            faidx_file2 = os.path.join(fastadir, f"{genome}.fna.fai")
+            if os.path.isfile(faidx_file1):
+                faidx_file = faidx_file1
+            else:
+                faidx_file = faidx_file2
         logger.debug(f"Removing faidx file for {genome} ({faidx_file})")
-        if os.path.isfile(faidx_file):
+        if os.path.exists(faidx_file):
             os.remove(faidx_file)
         else:
             logger.warning(f"Could not delete {faidx_file}")

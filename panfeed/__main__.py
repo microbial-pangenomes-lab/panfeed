@@ -116,6 +116,13 @@ def get_options():
                         help = "Output directory to store outputs "
                                "(will cause an error if already present)")
 
+    parser.add_argument("-f", "--fasta",
+                        help = "Directory containing all samples' nucleotide "
+                               "fasta files (extension either .fasta "
+                               "or .fna, "
+                               "samples should be named in the "
+                               "same way as in the panaroo header")
+
     parser.add_argument("-k", "--kmer-length", type = int,
                         default = 31,
                         help = "K-mer length (default: %(default)d)")
@@ -218,8 +225,10 @@ def main():
         sys.exit(1)
 
     logger.info("Looking at input GFF files")
-    filelist = what_are_my_inputfiles(args.gff)
+    filelist, fastalist = what_are_my_inputfiles(args.gff, args.fasta)
     logger.info(f"Found {len(filelist)} input genomes")
+    if args.fasta is not None:
+        logger.info(f"Found {len(fastalist)} input nucleotide sequences")
 
     data = {}
 
@@ -232,7 +241,8 @@ def main():
                                              not args.multiple_files)
 
     logger.info("Preparing inputs")
-    data = prep_data_n_fasta(filelist, args.gff, args.output)
+    data = prep_data_n_fasta(filelist, fastalist,
+                             args.gff, args.fasta, args.output)
 
     if not args.multiple_files:
         write_headers(hash_pat, kmer_hash, genepres)
@@ -333,7 +343,7 @@ def main():
         kmer_hash.close()
 
     logger.info("Removing temporary fasta files and faidx indices")
-    clean_up_fasta(filelist, args.output)
+    clean_up_fasta(filelist, fastalist, args.output, args.fasta)
 
 
 if __name__ == "__main__":
