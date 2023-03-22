@@ -42,19 +42,19 @@ def worker(f, read_q, write_q):
             logger.debug("Worker process finished")
             write_q.put(None)
             return
-        
+
         ret = f(work)
         if len(ret) == 0:
             logger.debug("Worker process finished")
             write_q.put(None)
             return
         write_q.put((ret,),timeout = 300)
-        
+
 
 def reader(iter_i, read_q, n):
     for x in iter_i:
         read_q.put(x)
-        
+
     logger.debug("Reader process finished")
 
     # poison pill
@@ -124,14 +124,14 @@ def get_options():
                                "this value or above 1-MAF are excluded "
                                "(default: %(default).2f, does not apply "
                                "to the kmers.tsv file)")
-    
+
     parser.add_argument("--upstream", type = int,
                         default = 0,
                         help = "How many bases to include upstream of "
                                "the actual gene sequences "
                                "(e.g. to include the 5' region, "
                                "default: %(default)d)")
-    
+
     parser.add_argument("--downstream", type = int,
                         default = 0,
                         help = "How many bases to include downstream of "
@@ -177,7 +177,7 @@ def get_options():
                         default = 1,
                         help = "Threads (default: %(default)d, at least 3 "
                                "are needed for parallelization)")
-    
+
     parser.add_argument("-ql", "--queue_limit",
                         type = int,
                         default = 3,
@@ -186,13 +186,13 @@ def get_options():
                                "this option is only relevant for cores > 1"
                                "reading queue limit = ql * cores"
                                "writing queue limit = ql")
-    
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
-    
+
     return parser.parse_args()
 
 
@@ -200,16 +200,16 @@ def main():
     args = get_options()
 
     set_logging(args.v)
-    
+
     qlimit = args.queue_limit
 
     klength = args.kmer_length
-    
+
     if args.downstream_start_codon == True and args.upstream + args.downstream < klength:
         logger.warning("Query sequence is shorter than k-mer length"
                        "Decrease k-mer size or increase query sequence length")
         sys.exit(1)
-    
+
     if args.maf > 0.5:
         logger.warning("--maf should be below 0.5")
         sys.exit(1)
@@ -244,16 +244,16 @@ def main():
                                 genes)
     iter_o = partial(cluster_cutter,
                      klength=klength,
-                     stroi=stroi, 
+                     stroi=stroi,
                      multiple_files=args.multiple_files,
                      canon=not args.non_canonical,
                      consider_missing_cluster=args.consider_missing,
                      output=args.output)
-   
+
     patterns = set()
     func_w = partial(pattern_hasher,
                      kmer_stroi=kmer_stroi,
-                     hash_pat=hash_pat, 
+                     hash_pat=hash_pat,
                      kmer_hash=kmer_hash,
                      genepres=genepres,
                      patfilt=not args.no_filter,
@@ -261,12 +261,12 @@ def main():
                      consider_missing_cluster=args.consider_missing,
                      output=args.output,
                      patterns=patterns,)
- 
+
     if args.cores > 2:
         # thanks to @SamStudio8 for the inspiration
         read_q = Queue(maxsize = qlimit * args.cores)
         write_q = Queue(maxsize = qlimit)
-        
+
         processes = []
 
         reader_process = Process(
@@ -328,7 +328,7 @@ def main():
 
     if kmer_hash is not None:
         kmer_hash.close()
-    
+
     logger.info("Removing temporary fasta files and faidx indices")
     clean_up_fasta(filelist, args.output)
 
