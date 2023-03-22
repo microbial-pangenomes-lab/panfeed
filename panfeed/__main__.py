@@ -85,10 +85,17 @@ def get_options():
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument("-g", "--gff",
+                        required=True,
                         help = "Directory containing all samples' GFF "
                                "files (must contain nucleotide sequence as "
-                               "well, and samples should be named in the "
+                               "well unless -f is used, "
+                               "and samples should be named in the "
                                "same way as in the panaroo header)")
+
+    parser.add_argument("-p", "--presence-absence",
+                        required=True,
+                        help = "Gene clusters presence absence table "
+                               "as output by panaroo")
 
     parser.add_argument("--targets",
                         default=None,
@@ -112,10 +119,6 @@ def get_options():
     parser.add_argument("-k", "--kmer-length", type = int,
                         default = 31,
                         help = "K-mer length (default: %(default)d)")
-
-    parser.add_argument("-p", "--presence-absence",
-                        help = "Gene clusters presence absence table "
-                               "as output by panaroo")
 
     parser.add_argument("--maf", type = float,
                         default = 0.01,
@@ -178,7 +181,7 @@ def get_options():
                         help = "Threads (default: %(default)d, at least 3 "
                                "are needed for parallelization)")
 
-    parser.add_argument("-ql", "--queue_limit",
+    parser.add_argument("-ql", "--queue-limit",
                         type = int,
                         default = 3,
                         help = "limit on items that may be put into the reading"
