@@ -42,19 +42,19 @@ def worker(f, read_q, write_q):
             logger.debug("Worker process finished")
             write_q.put(None)
             return
-        
+
         ret = f(work)
         if len(ret) == 0:
             logger.debug("Worker process finished")
             write_q.put(None)
             return
         write_q.put((ret,),timeout = 300)
-        
+
 
 def reader(iter_i, read_q, n):
     for x in iter_i:
         read_q.put(x)
-        
+
     logger.debug("Reader process finished")
 
     # poison pill
@@ -85,10 +85,17 @@ def get_options():
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument("-g", "--gff",
+                        required=True,
                         help = "Directory containing all samples' GFF "
                                "files (must contain nucleotide sequence as "
-                               "well, and samples should be named in the "
+                               "well unless -f is used, "
+                               "and samples should be named in the "
                                "same way as in the panaroo header)")
+
+    parser.add_argument("-p", "--presence-absence",
+                        required=True,
+                        help = "Gene clusters presence absence table "
+                               "as output by panaroo")
 
     parser.add_argument("--targets",
                         default=None,
@@ -109,13 +116,16 @@ def get_options():
                         help = "Output directory to store outputs "
                                "(will cause an error if already present)")
 
+    parser.add_argument("-f", "--fasta",
+                        help = "Directory containing all samples' nucleotide "
+                               "fasta files (extension either .fasta "
+                               "or .fna, "
+                               "samples should be named in the "
+                               "same way as in the panaroo header")
+
     parser.add_argument("-k", "--kmer-length", type = int,
                         default = 31,
                         help = "K-mer length (default: %(default)d)")
-
-    parser.add_argument("-p", "--presence-absence",
-                        help = "Gene clusters presence absence table "
-                               "as output by panaroo")
 
     parser.add_argument("--maf", type = float,
                         default = 0.01,
@@ -124,14 +134,14 @@ def get_options():
                                "this value or above 1-MAF are excluded "
                                "(default: %(default).2f, does not apply "
                                "to the kmers.tsv file)")
-    
+
     parser.add_argument("--upstream", type = int,
                         default = 0,
                         help = "How many bases to include upstream of "
                                "the actual gene sequences "
                                "(e.g. to include the 5' region, "
                                "default: %(default)d)")
-    
+
     parser.add_argument("--downstream", type = int,
                         default = 0,
                         help = "How many bases to include downstream of "
@@ -172,13 +182,19 @@ def get_options():
                         help = "Generate one set of outputs for each "
                                "gene cluster (default: one set of outputs)")
 
+    parser.add_argument("--compress",
+                        action = "store_true",
+                        default = False,
+                        help = "Compress output files with gzip "
+                               "(default: plain text)")
+
     parser.add_argument("--cores",
                         type = int,
                         default = 1,
                         help = "Threads (default: %(default)d, at least 3 "
                                "are needed for parallelization)")
-    
-    parser.add_argument("-ql", "--queue_limit",
+
+    parser.add_argument("-ql", "--queue-limit",
                         type = int,
                         default = 3,
                         help = "limit on items that may be put into the reading"
@@ -186,13 +202,13 @@ def get_options():
                                "this option is only relevant for cores > 1"
                                "reading queue limit = ql * cores"
                                "writing queue limit = ql")
-    
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
     parser.add_argument('--version', action='version',
                         version='%(prog)s '+__version__)
-    
+
     return parser.parse_args()
 
 
@@ -200,23 +216,25 @@ def main():
     args = get_options()
 
     set_logging(args.v)
-    
+
     qlimit = args.queue_limit
 
     klength = args.kmer_length
-    
+
     if args.downstream_start_codon == True and args.upstream + args.downstream < klength:
         logger.warning("Query sequence is shorter than k-mer length"
                        "Decrease k-mer size or increase query sequence length")
         sys.exit(1)
-    
+
     if args.maf > 0.5:
         logger.warning("--maf should be below 0.5")
         sys.exit(1)
 
     logger.info("Looking at input GFF files")
-    filelist = what_are_my_inputfiles(args.gff)
+    filelist, fastalist = what_are_my_inputfiles(args.gff, args.fasta)
     logger.info(f"Found {len(filelist)} input genomes")
+    if args.fasta is not None:
+        logger.info(f"Found {len(fastalist)} input nucleotide sequences")
 
     data = {}
 
@@ -226,10 +244,12 @@ def main():
                                              args.genes,
                                              args.presence_absence,
                                              args.output,
-                                             not args.multiple_files)
+                                             not args.multiple_files,
+                                             args.compress)
 
     logger.info("Preparing inputs")
-    data = prep_data_n_fasta(filelist, args.gff, args.output)
+    data = prep_data_n_fasta(filelist, fastalist,
+                             args.gff, args.fasta, args.output)
 
     if not args.multiple_files:
         write_headers(hash_pat, kmer_hash, genepres)
@@ -244,29 +264,31 @@ def main():
                                 genes)
     iter_o = partial(cluster_cutter,
                      klength=klength,
-                     stroi=stroi, 
+                     stroi=stroi,
                      multiple_files=args.multiple_files,
                      canon=not args.non_canonical,
                      consider_missing_cluster=args.consider_missing,
-                     output=args.output)
-   
+                     output=args.output,
+                     compress=args.compress)
+
     patterns = set()
     func_w = partial(pattern_hasher,
                      kmer_stroi=kmer_stroi,
-                     hash_pat=hash_pat, 
+                     hash_pat=hash_pat,
                      kmer_hash=kmer_hash,
                      genepres=genepres,
                      patfilt=not args.no_filter,
                      maf=args.maf,
                      consider_missing_cluster=args.consider_missing,
                      output=args.output,
-                     patterns=patterns,)
- 
+                     patterns=patterns,
+                     compress=args.compress)
+
     if args.cores > 2:
         # thanks to @SamStudio8 for the inspiration
         read_q = Queue(maxsize = qlimit * args.cores)
         write_q = Queue(maxsize = qlimit)
-        
+
         processes = []
 
         reader_process = Process(
@@ -328,9 +350,9 @@ def main():
 
     if kmer_hash is not None:
         kmer_hash.close()
-    
+
     logger.info("Removing temporary fasta files and faidx indices")
-    clean_up_fasta(filelist, args.output)
+    clean_up_fasta(filelist, fastalist, args.output, args.fasta)
 
 
 if __name__ == "__main__":
