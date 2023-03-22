@@ -22,7 +22,7 @@ def init_presabs_vector(n_strains, clusterpresab, missing_nan=False):
 
 def cluster_cutter(cluster_gen, klength, stroi,
                    multiple_files, canon, consider_missing_cluster,
-                   output):
+                   output, compress=False):
 #iterates through genes present in the cluster
 #shreds gene sequence into k-mers and adds them to the cluster dictionary
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
@@ -40,7 +40,7 @@ def cluster_cutter(cluster_gen, klength, stroi,
         path = os.path.join(output, idx)
         if not os.path.exists(path):
             os.mkdir(path)
-        kmer_stroi = create_kmer_stroi(path)
+        kmer_stroi = create_kmer_stroi(path, compress)
 
     cluster_dict = {}
 
@@ -131,7 +131,8 @@ def write_headers(hash_pat, kmer_hash, genepres):
 
 def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
                    genepres, patfilt, maf, output, patterns=None,
-                   consider_missing_cluster=False):
+                   consider_missing_cluster=False,
+                   compress=False):
     #iterates through the cluster dictionary output by cluster_cutter()
     #outputs the hashed patterns, patterns and k-mers to the output files
     #two files are created: hashed k-mer patterns to presence/absence patterns
@@ -159,7 +160,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
             path = os.path.join(output, idx)
             if not os.path.exists(path):
                 os.mkdir(path)
-            hash_pat, kmer_hash = create_hash_files(path)
+            hash_pat, kmer_hash = create_hash_files(path, compress)
             # must "flush" the already observed patterns file
             patterns = set()
 

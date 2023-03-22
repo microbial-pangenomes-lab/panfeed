@@ -2,6 +2,7 @@
 
 import os
 import sys
+import gzip
 import logging
 import numpy as np
 import pandas as pd
@@ -113,7 +114,8 @@ def clean_up_fasta(filelist, fastalist, output, fastadir):
             logger.warning(f"Could not delete {faidx_file}")
 
 
-def set_input_output(stroi_in, genes_in, presence_absence, output, single_file=True):
+def set_input_output(stroi_in, genes_in, presence_absence, output,
+                     single_file=True, compress=False):
     # determines the names of the input, output files 
    
     logger.debug(f"Loading pangenome file from panaroo ({presence_absence})")
@@ -153,8 +155,8 @@ def set_input_output(stroi_in, genes_in, presence_absence, output, single_file=T
     logger.debug(f"Creating output files within {output}")
     
     if single_file:
-        kmer_stroi = create_kmer_stroi(output)
-        hash_pat, kmer_hash = create_hash_files(output) 
+        kmer_stroi = create_kmer_stroi(output, compress)
+        hash_pat, kmer_hash = create_hash_files(output, compress) 
     else:
         # delayied opening of the files
         kmer_stroi = None
@@ -164,8 +166,12 @@ def set_input_output(stroi_in, genes_in, presence_absence, output, single_file=T
     return stroi, genes, kmer_stroi, hash_pat, kmer_hash, genepres
 
 
-def create_kmer_stroi(output):
-    kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
+def create_kmer_stroi(output, compress=False):
+    if not compress:
+        kmer_stroi = open(os.path.join(output, "kmers.tsv"), "w")
+    else:
+        kmer_stroi = gzip.open(os.path.join(output, "kmers.tsv.gz"), "wt",
+                               compresslevel=9)
     
     #creates the header for the strains of interest output file
     kmer_stroi.write("cluster\tstrain\tfeature_id\tcontig\tfeature_strand\tcontig_start\tcontig_end\tgene_start\tgene_end\tstrand\tk-mer\n")
@@ -174,9 +180,15 @@ def create_kmer_stroi(output):
     return kmer_stroi
 
 
-def create_hash_files(output):
-    hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
-    kmer_hash = open(os.path.join(output, "kmers_to_hashes.tsv"), "w")
+def create_hash_files(output, compress=False):
+    if not compress:
+        hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")
+        kmer_hash = open(os.path.join(output, "kmers_to_hashes.tsv"), "w")
+    else:
+        hash_pat = gzip.open(os.path.join(output, "hashes_to_patterns.tsv.gz"),
+                             "wt", compresslevel=9)
+        kmer_hash = gzip.open(os.path.join(output, "kmers_to_hashes.tsv.gz"),
+                              "wt", compresslevel=9)
 
     return hash_pat, kmer_hash
 

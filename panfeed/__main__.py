@@ -182,6 +182,12 @@ def get_options():
                         help = "Generate one set of outputs for each "
                                "gene cluster (default: one set of outputs)")
 
+    parser.add_argument("--compress",
+                        action = "store_true",
+                        default = False,
+                        help = "Compress output files with gzip "
+                               "(default: plain text)")
+
     parser.add_argument("--cores",
                         type = int,
                         default = 1,
@@ -238,7 +244,8 @@ def main():
                                              args.genes,
                                              args.presence_absence,
                                              args.output,
-                                             not args.multiple_files)
+                                             not args.multiple_files,
+                                             args.compress)
 
     logger.info("Preparing inputs")
     data = prep_data_n_fasta(filelist, fastalist,
@@ -261,7 +268,8 @@ def main():
                      multiple_files=args.multiple_files,
                      canon=not args.non_canonical,
                      consider_missing_cluster=args.consider_missing,
-                     output=args.output)
+                     output=args.output,
+                     compress=args.compress)
 
     patterns = set()
     func_w = partial(pattern_hasher,
@@ -273,7 +281,8 @@ def main():
                      maf=args.maf,
                      consider_missing_cluster=args.consider_missing,
                      output=args.output,
-                     patterns=patterns,)
+                     patterns=patterns,
+                     compress=args.compress)
 
     if args.cores > 2:
         # thanks to @SamStudio8 for the inspiration
