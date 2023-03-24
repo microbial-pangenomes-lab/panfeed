@@ -5,7 +5,8 @@ from io import StringIO
 import argparse
 
 def get_options():
-    description = "benchmarking program for panfeed"
+    description = """script that allows the correlation of GWAS associations 
+                    and meta data provided by panfeed"""
     
     parser = argparse.ArgumentParser(description=description)
     
