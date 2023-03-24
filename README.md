@@ -11,6 +11,13 @@ panfeed then prepares the data as input for pyseer, while keeping the positional
 
 `pandas` (1.3.2)
 
+## additional dependencies for visualization.py:
+
+`matplotlib` (3.5.2)
+
+`seaborn` (0.11.2)
+
+
 # Getting started
 Download the zipped folder and unpack it in the desired directory. You can then either install panfeed or use the panfeed-runner.py script to run it.
 
@@ -38,6 +45,9 @@ Displays the following commands and their description.
 	-g --gff
 Directory which contains all the GFF files. They must also contain the genome sequence and should be named the same as the panaroo .csv-header
 
+	-p --presence-absence
+Panaroo's gene_presence_absence.csv, which contains all the clustering information.
+
 	--targets
 File indicating, for which samples the k-mer positions should be logged. a simple text file containing the sample names suffices.
 
@@ -47,11 +57,11 @@ File indicating, for which gene clusters k-mer positions should be logged. By de
 	-o --output
 Name of the output directory. If the directory already exists, an error will be raised.
 
+	-f --fasta
+Directory containing all samples' nucleotide fasta files (file extension must be either .fasta or -fna, samples should be named in the same way as in the panaroo header)
+
 	-k --kmer-length
 Length of the k-mers. The default is 31 nt. 
-
-	-p --presence-absence
-Panaroo's gene_presence_absence.csv, which contains all the clustering information.
 
 	--maf
 Set the minor allele frequency threshold. K-mers that are represented in a percentage of genomes below this threshold are excluded. --maf must be below 0.5 (default = 0.1).
@@ -71,14 +81,20 @@ This option forces panfeed to also compute the non-canonical k-mers. By default,
 	--no-filter
 By default panfeed filters out all k-mers that have the same presence absence pattern as the gene cluster. This option may be activated to include these k-mers.
 
+	--consider-missing
+Output NaN for strains that do not encode for a k-mer if the gene is missing 
+
 	--multiple-files
 Activating this option will generate one set of output files for each gene cluster.
+
+	--compress
+Output files will be compressed using gzip
 
 	--cores
 Number of cores to use. At least 3 are needed for parallelization.
 
 	-ql --queue_limit
-limit on items that may be put into the reading and writing queues. By default writing_queue is limited to 3 items and reading_queue to 3*nr_of_cores. Only relevant for cores >= 3.
+Limit on items that may be put into the reading and writing queues. By default writing_queue is limited to 3 items and reading_queue to 3*nr_of_cores. Only relevant for cores >= 3.
 
 	-v
 If this option is used, the verbosity of the displayed information is increased.
@@ -86,7 +102,25 @@ If this option is used, the verbosity of the displayed information is increased.
 	--version
 Displays the current version of panfeed.
 
-The output of panfeed comes in the form of three TSV files that contain information on the position of logged k-mers (kmers.tsv), hashed patterns to patterns (hashes_to_patterns.tsv) and k-mers to hashed patterns (kmers_to_hashes.tsv). Additionally, panfeed will produce the .fasta and .fasta.fai (fasta index) files for the respective genomes/GFF files.
+The output of panfeed comes in the form of three TSV files that contain information on the position of logged k-mers (kmers.tsv), hashed patterns to patterns (hashes_to_patterns.tsv) and k-mers to hashed patterns (kmers_to_hashes.tsv). Additionally, panfeed will produce temporary .fasta and .fasta.fai (fasta index) files for the respective genomes/GFF files.
+
+# Convenience scripts
+## kmer2association.py
+This convenience script allows the quick correlation of associations by e.g. pyseer and the k-mer meta data of panfeed.
+`-h` will show the parameters
+
+## visualization.py
+This script can be used to create a number of different plots, displaying the associations for a given cluster.
+
+The three different plot variants are: 
+
+The default option is a plot that displays the log<sub>10</sub> association p-value for the nucleotide positions of your strains.
+
+`--nucleotides_only` This option creates a plot showing only the nucleotide sequences for the different strains.
+
+`--hybrid_heatmap` Using this option will create a plot that shows both the log<sub>10</sub> association p-value (as opacity) as well as the nucleotide sequence (as color).
+
+There are several different customization options for plots that can be viewed with `-h`.
 
 # Uninstall panfeed
 To uninstall panfeed, pip can be used with:
