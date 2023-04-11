@@ -35,7 +35,7 @@ setup(
     description='Compute gene-cluster specific k-mers over a pangenome',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/haneubau/panfeed',
+    url='https://github.com/microbial-pangenomes-lab/panfeed',
     author='Hannes Neubauer',
     author_email='Neubauer.Hannes@mh-hannover.de',
     license='Apache',
@@ -47,11 +47,16 @@ setup(
     packages=['panfeed'],
     entry_points={
         "console_scripts": [
-            'panfeed = panfeed.__main__:main'
+            'panfeed = panfeed.__main__:main',
+            'panfeed-get-clusters = panfeed.get_clusters:main',
+            'panfeed-get-kmers = panfeed.get_kmers:main',
+            'panfeed-plot = panfeed.plot:main',
             ]
     },
     install_requires=['numpy',
                       'pandas',
-                      'pyfaidx',]
+                      'pyfaidx',
+                      'matplotlib',
+                      'seaborn']
     #test_suite="tests",
 )
