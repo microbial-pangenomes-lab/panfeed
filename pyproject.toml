@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "panfeed"
+dynamic = [
+  "version"
+  ]
+authors = [
+  { name="Hannes Neubauer", email="neubauer.hannes@mh-hannover.de" },
+  { name="Marco Galardini", email="galardini.marco@mh-hannover.de" },
+]
+description = "Compute gene-cluster specific k-mers over a pangenome"
+readme = "README.md"
+license = {file = "LICENSE"}
+packages = ["panfeed"]
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "numpy",
+  "pandas",
+  "pyfaidx",
+  "matplotlib",
+  "seaborn",
+]
+
+[project.scripts]
+panfeed = "panfeed.__main__:main"
+panfeed-get-clusters = "panfeed.get_clusters:main"
+panfeed-get-kmers = "panfeed.get_kmers:main"
+panfeed-plot = "panfeed.plot:main"
+
+[tool.hatch.version]
+path = "panfeed/__init__.py"
+
+[project.urls]
+"Homepage" = "https://github.com/microbial-pangenomes-lab/panfeed"
+"Bug Tracker" = "https://github.com/microbial-pangenomes-lab/panfeed/issues"

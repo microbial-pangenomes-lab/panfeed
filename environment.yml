@@ -1,0 +1,15 @@
+name: panfeed
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+- python>=3.6
+- pandas
+- numpy
+- pyfaidx
+- matplotlib
+- seaborn
+- pip
+- pip:
+    - panfeed
