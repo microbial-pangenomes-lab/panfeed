@@ -14,7 +14,7 @@ due to repetitive regions and easier interpretations and visualization of result
 
 # Citation
 
-Coming soon
+Neubauer, H., & Galardini, M. (2023). **Improved interpretability of bacterial genome-wide associations using gene cluster centric k-mers**. bioRxiv. [10.1101/2023.04.11.536385](https://www.biorxiv.org/content/10.1101/2023.04.11.536385v1)
 
 # Installation
 
