@@ -258,9 +258,7 @@ def main():
                            aggfunc=max)
         # add missing strains for which no entry is present in k-mers table
         if len(strains.difference(g.index)) > 0:
-            g = g.T
-            g[sorted(strains.difference(g.index))] = np.nan
-            g = g.T
+            g = g.reindex(sorted(g.index) + sorted(strains.difference(g.index)))
         if args.phenotype_column is None:
             # sort the table by p-values
             g = g.loc[g.fillna(0).T.max().sort_values(ascending=False).index]
@@ -274,9 +272,7 @@ def main():
                            aggfunc=handle_paralogs)
         # add missing strains for which no entry is present in k-mers table
         if len(strains.difference(b.index)) > 0:
-            b = b.T
-            b[sorted(strains.difference(b.index))] = np.nan
-            b = b.T
+            b = b.reindex(sorted(b.index) + sorted(strains.difference(b.index)))
         if args.phenotype_column is None:
             # sort the table by p-values
             b = b.loc[g.index]
@@ -290,9 +286,7 @@ def main():
                                aggfunc=handle_paralogs_text)
             # add missing strains for which no entry is present in k-mers table
             if len(strains.difference(t.index)) > 0:
-                t = t.T
-                t[sorted(strains.difference(b.index))] = '-'
-                t = t.T
+                t = t.reindex(sorted(t.index) + sorted(strains.difference(t.index)))
             if args.phenotype_column is None:
                 # sort the table by p-values
                 t = t.loc[g.index]
