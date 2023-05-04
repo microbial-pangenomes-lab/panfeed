@@ -286,7 +286,8 @@ def main():
                                aggfunc=handle_paralogs_text)
             # add missing strains for which no entry is present in k-mers table
             if len(strains.difference(t.index)) > 0:
-                t = t.reindex(sorted(t.index) + sorted(strains.difference(t.index)))
+                t = t.reindex(sorted(t.index) + sorted(strains.difference(t.index)),
+                              fill_value='-')
             if args.phenotype_column is None:
                 # sort the table by p-values
                 t = t.loc[g.index]
