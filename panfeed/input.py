@@ -264,7 +264,17 @@ def parse_gff(file_name, feature_types=None):
 
 def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt,
                        gene_list=None):
-    
+    # check if we have genome data for all
+    # strains in the pangenome
+    # if not give a warning
+    all_strains = set(panaroo.columns)
+    missing_strains = all_strains.difference(genome_data.keys())
+    if len(missing_strains) > 0:
+        logger.warning(f'There are {len(missing_strains)} strains present '
+                       'in the pangenome table but not in the GFF directory')
+        for strain in missing_strains:
+            logger.debug(f'Missing GFF file: {strain}')
+
     # go through each gene cluster
     all_ogs = panaroo.shape[0]
     for i, (idx, row) in enumerate(panaroo.iterrows()):
@@ -299,7 +309,10 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
         for strain, genes in row.dropna().items():
             
             strain = str(strain)
-            
+
+            if strain not in genome_data:
+                continue
+
             gene_sequences[strain] = []
             # access the GFF/fasta data
             sequences, features = genome_data[strain]
