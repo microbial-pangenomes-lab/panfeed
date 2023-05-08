@@ -263,7 +263,7 @@ def parse_gff(file_name, feature_types=None):
 
 
 def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt,
-                       gene_list=None):
+                       gene_list=None, raise_missing=False):
     # check if we have genome data for all
     # strains in the pangenome
     # if not give a warning
@@ -274,6 +274,8 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
                        'in the pangenome table but not in the GFF directory')
         for strain in missing_strains:
             logger.debug(f'Missing GFF file: {strain}')
+        if raise_missing:
+            raise KeyError(f'Missing {len(missing_strains)} from the GFF directory')
 
     # go through each gene cluster
     all_ogs = panaroo.shape[0]
@@ -324,6 +326,17 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
                 except KeyError:
                     # e.g. refound genes are not in the GFF
                     logger.warning(f"Could not find gene {gene} from {idx} in {strain}")
+                    if raise_missing:
+                        raise KeyError(f"Could not find gene {gene} from {idx} in {strain}")
+                    continue
+                # double check if the chromosome is in the fasta file
+                try:
+                    sequences[feat.chromosome]
+                except KeyError:
+                    # e.g. refound genes are not in the GFF
+                    logger.warning(f"Could not find chromosome {feat.chromosome} in {strain}")
+                    if raise_missing:
+                        raise KeyError(f"Could not find chromosome {feat.chromosome} in {strain}")
                     continue
                 
                 # corner case: upstream offset is over the contig's edge
