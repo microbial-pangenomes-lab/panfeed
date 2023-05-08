@@ -203,6 +203,12 @@ def get_options():
                                "reading queue limit = ql * cores"
                                "writing queue limit = ql")
 
+    parser.add_argument("--stop-on-missing",
+                        action = "store_true",
+                        default = False,
+                        help = "Crash if samples/chromosomes/genes "
+                               "are not found (default: throw warnings)")
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -261,7 +267,8 @@ def main():
                                 args.downstream,
                                 args.downstream_start_codon,
                                 not args.no_filter,
-                                genes)
+                                genes,
+                                args.stop_on_missing)
     iter_o = partial(cluster_cutter,
                      klength=klength,
                      stroi=stroi,
