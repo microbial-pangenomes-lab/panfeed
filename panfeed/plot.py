@@ -256,6 +256,8 @@ def main():
         g = cl.pivot_table(index='strain', columns='gene_start',
                            values='significance',
                            aggfunc=max)
+        # add missing positions, if any
+        g = g.reindex(columns=range(cl['gene_start'].min(), cl['gene_start'].max()+1))
         # add missing strains for which no entry is present in k-mers table
         if len(strains.difference(g.index)) > 0:
             g = g.reindex(sorted(g.index) + sorted(strains.difference(g.index)))
@@ -270,6 +272,8 @@ def main():
         b = cl.pivot_table(index='strain', columns='gene_start',
                            values='scalar',
                            aggfunc=handle_paralogs)
+        # add missing positions, if any
+        b = b.reindex(columns=range(cl['gene_start'].min(), cl['gene_start'].max()+1))
         # add missing strains for which no entry is present in k-mers table
         if len(strains.difference(b.index)) > 0:
             b = b.reindex(sorted(b.index) + sorted(strains.difference(b.index)))
@@ -284,6 +288,8 @@ def main():
             t = cl.pivot_table(index='strain', columns='gene_start',
                                values='base',
                                aggfunc=handle_paralogs_text)
+            # add missing positions, if any
+            t = t.reindex(columns=range(cl['gene_start'].min(), cl['gene_start'].max()+1))
             # add missing strains for which no entry is present in k-mers table
             if len(strains.difference(t.index)) > 0:
                 t = t.reindex(sorted(t.index) + sorted(strains.difference(t.index)),
