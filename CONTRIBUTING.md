@@ -89,7 +89,7 @@ information, then wait for the remote tests to complete and add a command saying
 `@bioconda-bot please add label`. A bioconda maintainer will eventually merge and the new version will
 then appear on bioconda.
 
-5) Bump panfeed's repository
+**6) Bump panfeed's repository**
 
 On `panfeed`'s `main` branch, edit the `panfeed/__init__.py` so that it's clear the next version
 is a draft (e.g. if latest release is `1.5.0` you could do `1.6.1-dev`), followed by
