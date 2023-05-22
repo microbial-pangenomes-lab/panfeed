@@ -180,6 +180,7 @@ def main():
         else:
             logger.info("Phenotype is continuos")
         logger.info(f"sorting samples by their {args.phenotype_column} phenotype")
+        logger.info(f"ties will be broken by association p-value")
     else:
         logger.info(f"sorting samples by their lowest association p-value")
         if args.sample is not None:
@@ -266,7 +267,11 @@ def main():
             g = g.loc[g.fillna(0).T.max().sort_values(ascending=False).index]
         else:
             # sort by phenotype
-            g = g.loc[p.index]
+            df_sort = p.to_frame().join(g.fillna(0).T.max().to_frame(), how='outer')
+            df_sort.columns = ['pheno', 'pvalue']
+            df_sort = df_sort.fillna(0)
+            df_sort = df_sort.sort_values(['pheno', 'pvalue'], ascending=False)
+            g = g.loc[df_sort.index]
 
         # nucleotide matrix
         b = cl.pivot_table(index='strain', columns='gene_start',
@@ -299,7 +304,11 @@ def main():
                 t = t.loc[g.index]
             else:
                 # sort by phenotype
-                t = t.loc[p.index]
+                df_sort = p.to_frame().join(g.fillna(0).T.max().to_frame(), how='outer')
+                df_sort.columns = ['pheno', 'pvalue']
+                df_sort = df_sort.fillna(0)
+                df_sort = df_sort.sort_values(['pheno', 'pvalue'], ascending=False)
+                t = t.loc[df_sort.index]
 
         # find the index for the gene start (if present)
         gene_start = [i for i, x in enumerate(g.columns)
