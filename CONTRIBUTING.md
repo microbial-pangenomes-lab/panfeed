@@ -91,5 +91,5 @@ then appear on bioconda.
 ## 6) Bump panfeed's repository
 
 On `panfeed`'s `main` branch, edit the `panfeed/__init__.py` so that it's clear the next version
-is a draft (e.g. if latest release is `1.5.0` you could do `1.6.1-dev`), followed by
+is a draft (e.g. if latest release is `1.5.0` you could do `1.5.1-dev`), followed by
 `git add panfeed/__init__.py`, `git commit -m "Dev bump"` and `git push`.
