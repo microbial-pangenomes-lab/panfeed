@@ -1,5 +1,7 @@
 # panfeed
 
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/panfeed/badges/version.svg)](https://anaconda.org/bioconda/panfeed)
+
 `panfeed` is a k-mer streaming tool that works one gene cluster at a time.
 Starting from a list of annotated genome assemblies in GFF3 format and a gene presence absence matrix (as produced by
 [`roary`](https://github.com/sanger-pathogens/Roary), [`panaroo`](https://github.com/gtonkinhill/panaroo/)
@@ -21,6 +23,10 @@ Neubauer, H., & Galardini, M. (2023). **Improved interpretability of bacterial g
 `panfeed` can be installed using `pip`:
 
     python3 -m pip install panfeed
+
+Or through `conda` (or `mamba` to speed things up):
+
+    conda create -n panfeed -c bioconda panfeed
 
 Alternatively, we provide a `conda` recipe to create an environment 
 named `panfeed `. Download the
