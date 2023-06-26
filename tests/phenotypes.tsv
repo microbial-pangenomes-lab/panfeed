@@ -1,0 +1,11 @@
+code_rangement	choc	passage_en_rea	deces	age	atcd_bacteriemie	ethylisme	tabac	immuno	cirrhose	ins_cardiaque	ins_respi_chrnq	ins_renale_chrnq	diabete	vih	atcd_tumeur	atcd_hemopathie	pe_urinaire	pe_digestive	pe_pulmonaire	pe_cutanee	pe_kt	pe_chir	pe_gyneco	appropriate_antibiotic	septicoli	female	community	plurimicrobial
+H1-004-0018-V-M	0	0	0	86	0	0	0	0	0	1	0	0	0	0	0	0	1	0	0	0	0	0	0	1	1	1	1	0
+H1-001-0005-R-G	0	0	0	68	1	0	0	0	0	0	0	0	0	0	1	0	0	1	0	0	0	0	0	1	1	1	0	1
+R1B5I3	0	0	0	57	0	0	0	1	0	0	0	0	0	0	1	0	0	1	0	0	0	0	0	1	0	1	1	1
+R1B6E17	0	0	0	71	0	0	0	1	0	0	0	0	0	0	1	0	1	0	0	0	0	0	0	1	0	1	1	1
+H1-002-0048-T-C	0	0	0	90	0	0	0	0	0	0	0	0	0	0	0	0	1	1	0	0	0	0	0	1	1	0	0	0
+H1-004-0013-A-M	1	0	0	91	0	0	0	1	0	0	1	1	0	0	1	0	1	0	0	0	0	0	0	0	1	0	0	0
+R1B1A1	0	0	0	91	0	0	0	0	0	1	0	0	1	0	0	0	1	0	0	0	0	0	0	1	0	1	1	0
+H1-005-0025-R-L	0	0	0	77	0	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	1	1	1	1	0
+R1B2C7	0	0	0	55	1	0	0	1	0	0	0	0	0	0	0	1	1	0	0	0	0	0	0	1	0	1	0	0
+R1B6J11	0	0	0	69	0	0	0	0	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	1	0	1	0	0
