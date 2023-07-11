@@ -304,11 +304,7 @@ def main():
                 t = t.loc[g.index]
             else:
                 # sort by phenotype
-                df_sort = p.to_frame().join(g.fillna(0).T.max().to_frame(), how='outer')
-                df_sort.columns = ['pheno', 'pvalue']
-                df_sort = df_sort.fillna(0)
-                df_sort = df_sort.sort_values(['pheno', 'pvalue'], ascending=False)
-                t = t.loc[df_sort.index]
+                t = t.loc[p.index]
 
         # find the index for the gene start (if present)
         gene_start = [i for i, x in enumerate(g.columns)
