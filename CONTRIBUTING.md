@@ -43,6 +43,9 @@ that the account has been added as a maintainer for [panfeed](https://pypi.org/p
 
 ## 5) Upload on bioconda
 
+**NOTE:** it might be that bioconda will automatically create a pull request when `panfeed` is updated
+on pypi. So please wait up to a day before opening a pull request manually.
+
 This step requires that the upload on pypi was successful, as it relies
 on the new release to be present there. It also assumes you have a fork of the huge
 [`bioconda-recipes`](https://github.com/bioconda/bioconda-recipes/) repository and at least ~8GB
