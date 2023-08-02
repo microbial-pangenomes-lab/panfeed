@@ -267,7 +267,7 @@ def main():
             g = g.loc[g.fillna(0).T.max().sort_values(ascending=False).index]
         else:
             # sort by phenotype
-            g = g.loc[df_sort.index]
+            g = g.loc[p.index]
 
         # nucleotide matrix
         b = cl.pivot_table(index='strain', columns='gene_start',
