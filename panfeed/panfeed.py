@@ -199,7 +199,7 @@ def pattern_hasher(cluster_dict_iter, kmer_stroi, hash_pat, kmer_hash,
             if af < maf:
                 continue
             
-            if patfilt == True:
+            if patfilt == False:
                 if tuple(cluster_dict[kmer]) == tuple(clusterpresab):
                     continue
 
