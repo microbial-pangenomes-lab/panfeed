@@ -115,14 +115,14 @@ def get_options():
                         help="Spacing for ticks on x axis (default %(default)d)")
 
     parser.add_argument('--height',
-                        type=int,
-                        default=9,
-                        help="Figure height (inches, default %(default)d)")
+                        type=float,
+                        default=9.,
+                        help="Figure height (inches, default %(default).1f)")
 
     parser.add_argument('--width',
-                        type=int,
-                        default=10,
-                        help="Figure width (inches, default %(default)d)")
+                        type=float,
+                        default=10.,
+                        help="Figure width (inches, default %(default).1f)")
 
     parser.add_argument("-v", action='count',
                         default=0,
