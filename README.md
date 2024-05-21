@@ -115,6 +115,16 @@ among them:
 * `--start -50 --stop 100 --sample 0.1`, will restrict the plot to 10% of samples and to the -50 to +100 region relative to the start codon
 * adding `--nucleotides` to the above command will add the nucleotide letters to each plot
 
+# Working with a very large dataset
+
+**Note:** this is a new functionality introduced in v1.6.0
+
+If you are working with more than a few thousand input files, it is poor practice to have
+all the inputs in a single directory (e.g. for performance reasons). Following what
+other bioinformatic tools do to solve this issue, the `--gff` and `--fasta` arguments
+can also be provided as "files-of-files", where the path to each input file is written
+in each line.
+
 # Prerequisites:
 
 The following packages and version have been used to develop and test `panfeed`

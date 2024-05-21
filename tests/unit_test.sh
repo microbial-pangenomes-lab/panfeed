@@ -31,6 +31,9 @@ argumentarray+=("highmaf")
 #consider missing
 python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --consider-missing --output test_files/comp_data/panfeed_out/considermissing &> test_files/comp_data/logs/considermissing.log
 argumentarray+=("considermissing")
+#fileoffiles
+python ../panfeed-runner.py --gff test_files/input_gffs.txt --fasta test_files/input_fastas.txt --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --output test_files/comp_data/panfeed_out/fileoffiles &> test_files/comp_data/logs/fileoffiles.log
+argumentarray+=("fileoffiles")
 ##############multiple argument changes
 ##############compare output files
 for argument in "${argumentarray[@]}";

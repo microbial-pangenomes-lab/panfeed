@@ -87,7 +87,9 @@ def get_options():
     parser.add_argument("-g", "--gff",
                         required=True,
                         help = "Directory containing all samples' GFF "
-                               "files (must contain nucleotide sequence as "
+                               "files, or a file listing the relative path "
+                               "to each GFF file, one per line "
+                               "(must contain nucleotide sequence as "
                                "well unless -f is used, "
                                "and samples should be named in the "
                                "same way as in the panaroo header)")
@@ -118,10 +120,12 @@ def get_options():
 
     parser.add_argument("-f", "--fasta",
                         help = "Directory containing all samples' nucleotide "
-                               "fasta files (extension either .fasta "
+                               "fasta files, or a file listing the relative "
+                               "path to each fasta file, one per line "
+                               "(extension either .fasta "
                                "or .fna, "
                                "samples should be named in the "
-                               "same way as in the panaroo header")
+                               "same way as in the panaroo header)")
 
     parser.add_argument("-k", "--kmer-length", type = int,
                         default = 31,
