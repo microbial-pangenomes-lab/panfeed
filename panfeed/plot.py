@@ -86,6 +86,10 @@ def get_options():
                         default='png',
                         help='Output format for plots (default %(default)s)')
 
+    parser.add_argument('--output-directory',
+                        default='.',
+                        help='Output directory for the plots (default %(default)s)')
+
     parser.add_argument('--dpi',
                         type=int,
                         default=300,
@@ -337,7 +341,7 @@ def main():
         cax = divider.append_axes("right", size="2.5%", pad=0.05)
         coba = plt.colorbar(im, cax=cax)
         coba.set_label("-log10 p-value")
-        plt.savefig(f'significance_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
+        plt.savefig(f'{args.output_directory}/significance_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
         logger.info(f'saved plot significance_{gene}.{args.format}')
         plt.close()
 
@@ -360,7 +364,7 @@ def main():
         ax.set_title(f"nucleotide sequence {gene}")
         ax.set_xlabel("position relative to gene start")
         ax.set_ylabel(f"{g.shape[0]} samples")
-        plt.savefig(f'sequence_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
+        plt.savefig(f'{args.output_directory}/sequence_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
         logger.info(f'saved plot sequence_{gene}.{args.format}')
         plt.close()
 
@@ -389,7 +393,7 @@ def main():
         ax.set_title(f"significant k-mers {gene}")
         ax.set_xlabel("position relative to gene start")
         ax.set_ylabel(f"{g.shape[0]} samples")
-        plt.savefig(f'hybrid_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
+        plt.savefig(f'{args.output_directory}/hybrid_{gene}.{args.format}', dpi=args.dpi, bbox_inches="tight")
         logger.info(f'saved plot hybrid_{gene}.{args.format}')
         plt.close()
 
@@ -406,7 +410,7 @@ def main():
                 xticklabels=False,
                 square=True)
 
-    plt.savefig(f'sequence_legend.{args.format}', dpi=args.dpi, bbox_inches="tight")
+    plt.savefig(f'{args.output_directory}/sequence_legend.{args.format}', dpi=args.dpi, bbox_inches="tight")
     logger.info(f"Saved nucleotide color key at sequence_legend.{args.format}")
     plt.close()
 
