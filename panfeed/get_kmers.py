@@ -69,6 +69,13 @@ def get_options():
             default=False,
             help="Only output passing k-mers (default is all)")
 
+    parser.add_argument("--clusters-per-iteration",
+            type=int,
+            default=15,
+            help="Number of clusters to be considered in each iteration, "
+                 "a higher number means faster execution "
+                 "but higher memory usage (default %(default)d)")
+
     parser.add_argument("-v", action='count',
                         default=0,
                         help='Increase verbosity level')
@@ -110,21 +117,32 @@ def main():
     logger.info(f"Found {len(clusters)} gene clusters")
     logger.info(f"Found {len(kmers)} k-mers")
 
-    # load k-mers table piece-wise to reduce memory footprint
-    # thanks to SO: https://stackoverflow.com/a/13653490/1237531
-    iter_k = pd.read_csv(args.kmers, sep='\t',
-                         iterator=True, chunksize=100_000)
-    k = pd.concat([x[x['cluster'].isin(clusters)]
-        for x in iter_k]).set_index(['cluster', 'k-mer'])
+    first = True
+    clusters = list(clusters)
+    # only look for a limited number of clusters
+    # to avoid memory spikes when the number of clusters is too big
+    # the k-mers file has to be parsed multiple times unfortunately
+    for i, idx in enumerate(range(0, len(clusters), args.clusters_per_iteration)):
+        bunch = clusters[idx: idx + args.clusters_per_iteration]
 
-    a = a.join(h, how='inner')
-    if args.only_passing:
-        how = 'left'
-    else:
-        how = 'right'
-    a = a.reset_index().set_index(['cluster', 'k-mer']).join(k, how=how)
+        logger.info(f"Searching for k-mers for {len(bunch)} clusters (iteration {i+1})")
+        # load k-mers table piece-wise to reduce memory footprint
+        # thanks to SO: https://stackoverflow.com/a/13653490/1237531
+        iter_k = pd.read_csv(args.kmers, sep='\t',
+                             iterator=True, chunksize=100_000)
+        k = pd.concat([x[x['cluster'].isin(bunch)]
+            for x in iter_k]).set_index(['cluster', 'k-mer'])
 
-    a.to_csv(sys.stdout, sep='\t')
+        b = a.join(h, how='inner')
+        if args.only_passing:
+            how = 'left'
+        else:
+            how = 'right'
+        b = b.reset_index().set_index(['cluster', 'k-mer']).join(k, how=how)
+
+        b.to_csv(sys.stdout, sep='\t', header=first)
+
+        first = False
 
 
 if __name__ == "__main__":
