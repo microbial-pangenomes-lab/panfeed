@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import os
 import sys
 import logging
 import argparse
@@ -159,6 +160,11 @@ def get_options():
                         help = "Center the --downstream argument "
                                "at the start codon (default is stop codon)")
 
+    parser.add_argument("--evo",
+                        action = "store_true",
+                        default = False,
+                        help = "Prepare fasta files fo evo scoring")
+
     parser.add_argument("--non-canonical",
                         action = "store_true",
                         default = False,
@@ -264,7 +270,8 @@ def main():
     if not args.multiple_files:
         write_headers(hash_pat, kmer_hash, genepres)
 
-    logger.info("Extracting k-mers")
+    if not args.evo:
+        logger.info("Extracting k-mers")
     iter_i = iter_gene_clusters(genepres, 
                                 data,
                                 args.upstream,
@@ -273,84 +280,97 @@ def main():
                                 not args.no_filter,
                                 genes,
                                 args.stop_on_missing)
-    iter_o = partial(cluster_cutter,
-                     klength=klength,
-                     stroi=stroi,
-                     multiple_files=args.multiple_files,
-                     canon=not args.non_canonical,
-                     consider_missing_cluster=args.consider_missing,
-                     output=args.output,
-                     compress=args.compress)
-
-    patterns = set()
-    func_w = partial(pattern_hasher,
-                     kmer_stroi=kmer_stroi,
-                     hash_pat=hash_pat,
-                     kmer_hash=kmer_hash,
-                     genepres=genepres,
-                     patfilt=not args.no_filter,
-                     maf=args.maf,
-                     consider_missing_cluster=args.consider_missing,
-                     output=args.output,
-                     patterns=patterns,
-                     compress=args.compress)
-
-    if args.cores > 2:
-        # thanks to @SamStudio8 for the inspiration
-        read_q = Queue(maxsize = qlimit * args.cores)
-        write_q = Queue(maxsize = qlimit)
-
-        processes = []
-
-        reader_process = Process(
-            target=reader,
-            args=(
-                iter_i,
-                read_q,
-                args.cores - 2
-            ),
-        )
-        processes.append(reader_process)
-
-        writer_process = Process(
-            target=writer,
-            args=(
-                func_w,
-                write_q,
-                args.cores - 2,
-            ),
-        )
-        processes.append(writer_process)
-
-        for i in range(args.cores - 2):
-            p = Process(
-                target=worker,
-                args=(
-                    iter_o,
-                    read_q,
-                    write_q,
-                ),
-            )
-            processes.append(p)
-        logger.debug(f"Started {args.cores - 2} worker processes")
-
-        for p in processes:
-            p.start()
-
-        for p in processes:
-            p.join()
+    if args.evo:
+        logger.info("Preparing inputs for evo scoring")
+        for gene_sequences, idx, clusterpresab in iter_i:
+            logger.debug(f"Preparing inputs for evo scoring ({idx})")
+            path = os.path.join(args.output, idx)
+            if not os.path.exists(path):
+                os.mkdir(path)
+            fout = open(os.path.join(path, 'sequences.fna'), 'w')
+            for strain, seqs in gene_sequences.items():
+                for i, seq in enumerate(seqs):
+                    fout.write(f'>{idx}|{strain}|{i}\n{seq.sequence}\n')
+            fout.close()
     else:
-        if args.cores > 1:
-            logger.warning("Need at least 3 cores for parallelization")
-            logger.warning("Running a single thread")
+        iter_o = partial(cluster_cutter,
+                         klength=klength,
+                         stroi=stroi,
+                         multiple_files=args.multiple_files,
+                         canon=not args.non_canonical,
+                         consider_missing_cluster=args.consider_missing,
+                         output=args.output,
+                         compress=args.compress)
 
         patterns = set()
-        for x in iter_i:
-            ret = iter_o(x)
-            if len(ret) == 0:
-                continue
-            patterns = func_w((ret,),
-                              patterns=patterns)
+        func_w = partial(pattern_hasher,
+                         kmer_stroi=kmer_stroi,
+                         hash_pat=hash_pat,
+                         kmer_hash=kmer_hash,
+                         genepres=genepres,
+                         patfilt=not args.no_filter,
+                         maf=args.maf,
+                         consider_missing_cluster=args.consider_missing,
+                         output=args.output,
+                         patterns=patterns,
+                         compress=args.compress)
+
+        if args.cores > 2:
+            # thanks to @SamStudio8 for the inspiration
+            read_q = Queue(maxsize = qlimit * args.cores)
+            write_q = Queue(maxsize = qlimit)
+
+            processes = []
+
+            reader_process = Process(
+                target=reader,
+                args=(
+                    iter_i,
+                    read_q,
+                    args.cores - 2
+                ),
+            )
+            processes.append(reader_process)
+
+            writer_process = Process(
+                target=writer,
+                args=(
+                    func_w,
+                    write_q,
+                    args.cores - 2,
+                ),
+            )
+            processes.append(writer_process)
+
+            for i in range(args.cores - 2):
+                p = Process(
+                    target=worker,
+                    args=(
+                        iter_o,
+                        read_q,
+                        write_q,
+                    ),
+                )
+                processes.append(p)
+            logger.debug(f"Started {args.cores - 2} worker processes")
+
+            for p in processes:
+                p.start()
+
+            for p in processes:
+                p.join()
+        else:
+            if args.cores > 1:
+                logger.warning("Need at least 3 cores for parallelization")
+                logger.warning("Running a single thread")
+
+            patterns = set()
+            for x in iter_i:
+                ret = iter_o(x)
+                if len(ret) == 0:
+                    continue
+                patterns = func_w((ret,),
+                                  patterns=patterns)
 
 
     if kmer_stroi is not None:
