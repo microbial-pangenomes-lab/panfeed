@@ -414,31 +414,35 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
                 # adjust if so and save the true offset
                 if feat.strand > 0 and feat.start-1-up < 0:
                     offset = feat.start - 1
-                elif feat.strand < 0 and feat.end+up > len(sequences[feat.chromosome]):
-                    offset = len(sequences[feat.chromosome]) - feat.end
                 else:
                     offset = up
- 
+                # corner case: downstream offset is over the contig's edge
+                # adjust if so and save the true offset
+                if feat.strand < 0 and feat.start-1-down < 0:
+                    offset_d = feat.start - 1
+                else:
+                    offset_d = down
+
                 # access its gene sequence
                 if not down_start_codon:
                     # down means relative to the gene's 3'
                     if feat.strand > 0:
-                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.end+down]
+                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.end+offset_d]
                         seq_start = feat.start - offset
-                        seq_end = feat.end + down
+                        seq_end = feat.end + offset_d
                     else:
-                        seq = -sequences[feat.chromosome][feat.start-1-down:feat.end+offset]
-                        seq_start = feat.start - down
+                        seq = -sequences[feat.chromosome][feat.start-1-offset_d:feat.end+offset]
+                        seq_start = feat.start - offset_d
                         seq_end = feat.end + offset
                 else:
                     # down means relative to the gene's 5'
                     if feat.strand > 0:
-                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.start+down]
+                        seq = sequences[feat.chromosome][feat.start-1-offset:feat.start+offset_d]
                         seq_start = feat.start - offset
-                        seq_end = feat.start + down
+                        seq_end = feat.start + offset_d
                     else:
-                        seq = -sequences[feat.chromosome][feat.end-1-down:feat.end+offset]
-                        seq_start = feat.end - down
+                        seq = -sequences[feat.chromosome][feat.end-1-offset_d:feat.end+offset]
+                        seq_start = feat.end - offset_d
                         seq_end = feat.end + offset
 
                 # reverse complement
