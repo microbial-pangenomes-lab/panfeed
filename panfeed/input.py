@@ -109,7 +109,8 @@ def prep_data_n_fasta(filelist, fastalist,
             txtfile.close()
 
             logger.debug(f"Creating faidx file for {genome}")
-            sequences = create_faidx(os.path.join(output, 'fastas', f'{genome}.fasta'))
+            sequences = create_faidx(os.path.join(output, 'fastas', f'{genome}.fasta'),
+                                     close=True)
         else:
             if fastadir is not None and os.path.isfile(fastadir):
                 ffile = fasta_d[genome]
@@ -124,7 +125,7 @@ def prep_data_n_fasta(filelist, fastalist,
                 else:
                     logger.error(f"Neither {genome}.fna not {genome}.fasta found in {fastadir}")
                     sys.exit(1)
-            sequences = create_faidx(ffile)
+            sequences = create_faidx(ffile, close=True)
 
         logger.debug(f"Parsing features for {genome}")
         if os.path.isfile(gffdir):
@@ -258,12 +259,16 @@ def create_hash_files(output, compress=False):
     return hash_pat, kmer_hash
 
 
-def create_faidx(file_name, uppercase=True):
+def create_faidx(file_name, uppercase=True, close=True):
 
     faidx = Fasta(file_name,
-                  sequence_always_upper=uppercase)
-
-    return faidx
+                  sequence_always_upper=uppercase,
+                  rebuild=False)
+    if close:
+        faidx.close()
+        return file_name
+    else:
+        return faidx
 
 
 def parse_gff(file_name, feature_types=None):
@@ -382,7 +387,8 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
 
             gene_sequences[strain] = []
             # access the GFF/fasta data
-            sequences, features = genome_data[strain]
+            sequences_fname, features = genome_data[strain]
+            sequences = create_faidx(sequences_fname, close=False)
             # be aware of paralogs
             for gene in genes.split(';'):
                 # access a particular gene
@@ -447,6 +453,9 @@ def iter_gene_clusters(panaroo, genome_data, up, down, down_start_codon, patfilt
                                seq_start, seq_end,
                                feat.strand, offset)
                 gene_sequences[strain].append(seq1)
+
+            # close faidx handle
+            sequences.close()
 
         # provide an empty list if the strain does not have the gene
         for strain in absent:
