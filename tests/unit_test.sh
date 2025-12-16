@@ -1,38 +1,53 @@
 #!/bin/bash
 argumentarray=()
+
+green="\033[1;32m"
+red="\033[1;31m"
+reset="\033[0m"
+
+die () {
+        echo -e $red"############"$reset
+	echo -e $red$1$reset
+	echo -e $red"Test failed!"$reset
+	echo -e $red"############"$reset
+	exit 1
+}
 ##############single argument changes
 #basic
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --output test_files/comp_data/panfeed_out/basic &> test_files/comp_data/logs/basic.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --output test_files/comp_data/panfeed_out/basic &> test_files/comp_data/logs/basic.log || die "Basic run failed"
 argumentarray+=("basic")
+#cores
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --cores 4 --output test_files/comp_data/panfeed_out/cores &> test_files/comp_data/logs/cores.log || die "Multiple cores run failed"
+argumentarray+=("cores")
 #no k-mers logged
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --output test_files/comp_data/panfeed_out/nolog &> test_files/comp_data/logs/nolog.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --output test_files/comp_data/panfeed_out/nolog &> test_files/comp_data/logs/nolog.log || die "No k-mers logged run failed"
 argumentarray+=("nolog")
 #upstream
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 0 --output test_files/comp_data/panfeed_out/upstream &> test_files/comp_data/logs/upstream.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 0 --output test_files/comp_data/panfeed_out/upstream &> test_files/comp_data/logs/upstream.log || die "Upstream run failed"
 argumentarray+=("upstream")
 #downstream
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 0 --downstream 100 --output test_files/comp_data/panfeed_out/downstream &> test_files/comp_data/logs/downstream.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 0 --downstream 100 --output test_files/comp_data/panfeed_out/downstream &> test_files/comp_data/logs/downstream.log || die "Downstream run failed"
 argumentarray+=("downstream")
 #up-/downstream
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 100 --output test_files/comp_data/panfeed_out/updownstream &> test_files/comp_data/logs/updownstream.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 100 --output test_files/comp_data/panfeed_out/updownstream &> test_files/comp_data/logs/updownstream.log || die "Up-/downstream run failed"
 argumentarray+=("updownstream")
 #up-/downstream
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 100 --downstream-start-codon --output test_files/comp_data/panfeed_out/downstart &> test_files/comp_data/logs/downstart.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --upstream 100 --downstream 100 --downstream-start-codon --output test_files/comp_data/panfeed_out/downstart &> test_files/comp_data/logs/downstart.log || die "Downstream start codon run failed"
 argumentarray+=("downstart")
 #non-canonical
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --non-canonical --output test_files/comp_data/panfeed_out/noncanonical &> test_files/comp_data/logs/noncanonical.log
-argumentarray+=("noncanonical")
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --non-canonical --output test_files/comp_data/panfeed_out/noncanonical &> test_files/comp_data/logs/noncanonical.log || die "Non-canonical run failed"
+argumentarray+=("noncanonical") 
 #no filter
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --no-filter --output test_files/comp_data/panfeed_out/nofilter &> test_files/comp_data/logs/nofilter.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --no-filter --output test_files/comp_data/panfeed_out/nofilter &> test_files/comp_data/logs/nofilter.log || die "No filter run failed"
 argumentarray+=("nofilter")
 #high maf
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --maf 0.1 --output test_files/comp_data/panfeed_out/highmaf &> test_files/comp_data/logs/highmaf.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --maf 0.1 --output test_files/comp_data/panfeed_out/highmaf &> test_files/comp_data/logs/highmaf.log || die "High MAF run failed"
 argumentarray+=("highmaf")
 #consider missing
-python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --consider-missing --output test_files/comp_data/panfeed_out/considermissing &> test_files/comp_data/logs/considermissing.log
+python ../panfeed-runner.py --gff test_files/gffs/ --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --consider-missing --output test_files/comp_data/panfeed_out/considermissing &> test_files/comp_data/logs/considermissing.log || die "Consider missing run failed"
 argumentarray+=("considermissing")
 #fileoffiles
-python ../panfeed-runner.py --gff test_files/input_gffs.txt --fasta test_files/input_fastas.txt --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --output test_files/comp_data/panfeed_out/fileoffiles &> test_files/comp_data/logs/fileoffiles.log
+python ../panfeed-runner.py --gff test_files/input_gffs.txt --fasta test_files/input_fastas.txt --presence-absence test_files/gene_presence_absence.csv --targets test_files/stroi.txt --output test_files/comp_data/panfeed_out/fileoffiles &> test_files/comp_data/logs/fileoffiles.log || die "File of files run failed"
 argumentarray+=("fileoffiles")
 ##############multiple argument changes
 ##############compare output files

@@ -7,6 +7,7 @@ import argparse
 import logging.handlers
 from functools import partial
 import itertools
+import multiprocessing
 from multiprocessing import Process, Queue
 
 from .__init__ import __version__
@@ -296,13 +297,15 @@ def main():
                      compress=args.compress)
 
     if args.cores > 2:
+        ctx = multiprocessing.get_context('fork')
+
         # thanks to @SamStudio8 for the inspiration
         read_q = Queue(maxsize = qlimit * args.cores)
         write_q = Queue(maxsize = qlimit)
 
         processes = []
 
-        reader_process = Process(
+        reader_process = ctx.Process(
             target=reader,
             args=(
                 iter_i,
@@ -312,7 +315,7 @@ def main():
         )
         processes.append(reader_process)
 
-        writer_process = Process(
+        writer_process = ctx.Process(
             target=writer,
             args=(
                 func_w,
@@ -323,7 +326,7 @@ def main():
         processes.append(writer_process)
 
         for i in range(args.cores - 2):
-            p = Process(
+            p = ctx.Process(
                 target=worker,
                 args=(
                     iter_o,
