@@ -187,6 +187,12 @@ def get_options():
                         help = "Generate one set of outputs for each "
                                "gene cluster (default: one set of outputs)")
 
+    parser.add_argument("--save-sequences",
+                        action = "store_true",
+                        default = False,
+                        help = "Save sequences to sequences.fna file "
+                               "(only works with --multiple-files)")
+
     parser.add_argument("--compress",
                         action = "store_true",
                         default = False,
@@ -241,6 +247,10 @@ def main():
         logger.warning("--maf should be below 0.5")
         sys.exit(1)
 
+    if args.save_sequences and not args.multiple_files:
+        logger.error("--save-sequences only works with --multiple-files")
+        sys.exit(1)
+
     logger.info("Looking at input GFF files")
     filelist, fastalist = what_are_my_inputfiles(args.gff, args.fasta)
     logger.info(f"Found {len(filelist)} input genomes")
@@ -281,7 +291,8 @@ def main():
                      canon=not args.non_canonical,
                      consider_missing_cluster=args.consider_missing,
                      output=args.output,
-                     compress=args.compress)
+                     compress=args.compress,
+                     save_sequences=args.save_sequences)
 
     patterns = set()
     func_w = partial(pattern_hasher,

@@ -246,6 +246,16 @@ def create_kmer_stroi(output, compress=False):
     return kmer_stroi
 
 
+def create_sequence_file(output, compress=False):
+    if not compress:
+        seq_file = open(os.path.join(output, "sequences.fna"), "w")
+    else:
+        seq_file = gzip.open(os.path.join(output, "sequences.fna.gz"), "wt",
+                             compresslevel=9)
+
+    return seq_file
+
+
 def create_hash_files(output, compress=False):
     if not compress:
         hash_pat = open(os.path.join(output, "hashes_to_patterns.tsv"), "w")

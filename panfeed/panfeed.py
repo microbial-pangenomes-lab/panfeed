@@ -8,7 +8,7 @@ import binascii
 from copy import deepcopy
 from io import StringIO
 
-from .input import create_hash_files, create_kmer_stroi
+from .input import create_hash_files, create_kmer_stroi, create_sequence_file
 
 logger = logging.getLogger('panfeed.panfeed')
 
@@ -22,11 +22,12 @@ def init_presabs_vector(n_strains, clusterpresab, missing_nan=False):
 
 def cluster_cutter(cluster_gen, klength, stroi,
                    multiple_files, canon, consider_missing_cluster,
-                   output, compress=False):
+                   output, compress=False, save_sequences=False):
 #iterates through genes present in the cluster
 #shreds gene sequence into k-mers and adds them to the cluster dictionary
 #if a gene belongs to a strain of interest, additional info on the k-mer is saved
     kmer_stroi = None
+    seq_file = None
 
     cluster, idx, clusterpresab = cluster_gen
     logger.debug(f"Extracting k-mers from {idx}")
@@ -41,6 +42,10 @@ def cluster_cutter(cluster_gen, klength, stroi,
         if not os.path.exists(path):
             os.mkdir(path)
         kmer_stroi = create_kmer_stroi(path, compress)
+        
+        # Create sequence file if save_sequences is True
+        if save_sequences:
+            seq_file = create_sequence_file(path, compress)
 
     cluster_dict = {}
 
@@ -52,7 +57,7 @@ def cluster_cutter(cluster_gen, klength, stroi,
                                       consider_missing_cluster)
 
     for strain in cluster.keys():
-        for seq in cluster[strain]:
+        for paralog_num, seq in enumerate(cluster[strain]):
             gene_id = seq.id
             offset = seq.offset
 
@@ -105,9 +110,17 @@ def cluster_cutter(cluster_gen, klength, stroi,
                     else:
                         memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{strand}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{used_strand}\t{specseq}\n")
                         memchunk.write(f"{idx}\t{strain}\t{gene_id}\t{contig}\t{strand}\t{truestart}\t{trueend}\t{genestart}\t{geneend}\t{-used_strand}\t{revspecseq}\n")
+                
+                # Save sequences to file if save_sequences is True
+                if save_sequences and multiple_files:
+                    # Save full gene sequence only once per gene
+                    if pos == 0:  # Only save at the first position
+                        seq_file.write(f">{gene_id}|{strain}|{paralog_num}\n{seq.sequence}\n")
 
     if multiple_files:
         kmer_stroi.write(memchunk.getvalue())
+        if save_sequences and seq_file is not None:
+            seq_file.close()
         return idx, cluster_dict, clusterpresab, None
     else:
         return idx, cluster_dict, clusterpresab, str(memchunk.getvalue())
