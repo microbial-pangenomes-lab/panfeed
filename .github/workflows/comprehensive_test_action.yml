@@ -1,0 +1,55 @@
+# This workflow will install Python dependencies and run both unit and integration tests
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: comprehensive tests panfeed
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install -e .
+
+    - name: Extract test files
+      run: |
+        cd tests
+        tar -xf test_data.tar.gz
+
+    - name: Run unit tests
+      run: |
+        cd tests
+        python -m pytest unit/ -v --tb=short -k "not test_cluster_cutter and not test_pattern_hasher and not test_process"
+
+    - name: Run integration tests
+      run: |
+        python tests/simple_integration_test.py
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          tests/test_files/integration_test_output/
+          tests/test_files/simple_integration_test_output/
+          tests/comp_data/

@@ -48,3 +48,11 @@ jobs:
         cd tests
         tar -xf test_files.tar.gz
         bash unit_test.sh
+
+    - name: Run additional unit tests
+      run: |
+        PATH=$CONDA/bin/bin:$PATH
+        source $CONDA/bin/activate panfeed
+        alias python=$CONDA/bin/python
+        cd tests
+        python -m pytest unit/test_input.py -v --tb=short
