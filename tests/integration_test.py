@@ -69,7 +69,11 @@ def run_integration_tests():
     """Run comprehensive integration tests"""
     
     # Test configuration
-    test_files_dir = "tests/test_files"
+    # Use dynamic path resolution that works from both root and tests directory
+    if os.path.exists("test_files"):
+        test_files_dir = "test_files"
+    else:
+        test_files_dir = "tests/test_files"
     baseline_dir = os.path.join(test_files_dir, "comp_data")
     test_output_base = os.path.join(test_files_dir, "integration_test_output")
     

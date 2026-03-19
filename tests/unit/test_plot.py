@@ -18,7 +18,11 @@ class TestPlotModule:
     def setup_method(self):
         """Setup test fixtures"""
         self.test_dir = tempfile.mkdtemp()
-        self.test_files_dir = "tests/test_files"
+        # Use dynamic path resolution that works from both root and tests directory
+        if os.path.exists("test_files"):
+            self.test_files_dir = "test_files"
+        else:
+            self.test_files_dir = "tests/test_files"
 
     def teardown_method(self):
         """Clean up test fixtures"""
