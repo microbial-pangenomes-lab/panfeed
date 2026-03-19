@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: "3.x"
 
@@ -53,3 +53,6 @@ jobs:
           tests/test_files/integration_test_output/
           tests/test_files/simple_integration_test_output/
           tests/comp_data/
+
+    - name: Force Node.js 24 for actions
+      run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
